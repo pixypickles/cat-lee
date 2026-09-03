@@ -46,17 +46,6 @@
     {x:2700,y:1810,w:64,h:82,hp:4,vx:0,flash:0,alive:true,type:"boar"},
     {x:3420,y:1850,w:64,h:82,hp:5,vx:0,flash:0,alive:true,type:"dog"}
   ];
-  // 敵AI用の状態
-  for(const e of enemies){
-    e.facing = player.x < e.x ? -1 : 1;
-    e.walkPhase = Math.random()*Math.PI*2;
-    e.attackTimer = 0;
-    e.attackCooldown = .5 + Math.random()*.7;
-    e.attackHitDone = false;
-  }
-
-
-
   const input = {
     x:0, y:0,
     attack:false, attackPressed:false,
@@ -89,6 +78,15 @@
     airKickCount:0,
     lastDirX:0, lastDirTimer:0
   };
+
+  // 敵AI用の状態。player生成後に初期化する。
+  for(const e of enemies){
+    e.facing = player.x < e.x ? -1 : 1;
+    e.walkPhase = Math.random()*Math.PI*2;
+    e.attackTimer = 0;
+    e.attackCooldown = .5 + Math.random()*.7;
+    e.attackHitDone = false;
+  }
 
   const camera = {x:0,y:0};
 
