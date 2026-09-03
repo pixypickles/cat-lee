@@ -100,7 +100,7 @@ html, body {
 #buttons {
   position: absolute;
   right: max(14px, env(safe-area-inset-right));
-  bottom: max(18px, env(safe-area-inset-bottom));
+  bottom: max(82px, calc(env(safe-area-inset-bottom) + 58px));
   width: min(48vw, 330px);
   height: min(42vw, 280px);
   pointer-events: none;
@@ -145,4 +145,14 @@ html, body {
 
 @media (max-width: 800px) {
   #help { display: none; }
+}
+
+
+/* v0.6: action buttons higher for phones / landscape */
+@media (max-height: 520px) {
+  #buttons {
+    bottom: max(68px, calc(env(safe-area-inset-bottom) + 48px));
+    transform: scale(.92);
+    transform-origin: right bottom;
+  }
 }
