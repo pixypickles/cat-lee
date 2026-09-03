@@ -58,6 +58,7 @@
     onWall:0,
     wallLatched:false,
     wallLatchSide:0,
+    wallRef:null,
     dashTimer:0,
     dashCooldown:0,
     attackTimer:0,
@@ -182,16 +183,42 @@
     }
   }
 
-  function wallProbe(){
-    const pad = 5;
-    const left = {x:player.x-pad,y:player.y+6,w:pad,h:player.h-12};
-    const right= {x:player.x+player.w,y:player.y+6,w:pad,h:player.h-12};
-    let side=0;
+  function getWallContact(){
+    const pad = 14;
+    const inset = 10;
+    const left = {x:player.x-pad,y:player.y+inset,w:pad,h:player.h-inset*2};
+    const right= {x:player.x+player.w,y:player.y+inset,w:pad,h:player.h-inset*2};
+
     for(const p of platforms){
-      if(overlap(left,p)) side=-1;
-      if(overlap(right,p)) side=1;
+      const verticalOverlap =
+        player.y + player.h - inset > p.y &&
+        player.y + inset < p.y + p.h;
+
+      if(!verticalOverlap) continue;
+
+      const leftGap = Math.abs(player.x - (p.x + p.w));
+      const rightGap = Math.abs((player.x + player.w) - p.x);
+
+      if(overlap(left,p) || leftGap <= pad) return {side:-1, platform:p};
+      if(overlap(right,p) || rightGap <= pad) return {side:1, platform:p};
     }
-    player.onWall = side;
+    return null;
+  }
+
+  function wallProbe(){
+    const c = getWallContact();
+    player.onWall = c ? c.side : 0;
+    return c;
+  }
+
+  function snapToWall(contact){
+    if(!contact) return;
+    const p = contact.platform;
+    if(contact.side === 1){
+      player.x = p.x - player.w - 0.5;
+    }else{
+      player.x = p.x + p.w + 0.5;
+    }
   }
 
   function startAttack(type, duration=.24){
@@ -247,41 +274,46 @@
       player.facing = away;
       player.wallLatched = false;
       if(input.y < -.35){
-        player.vx = 430*away; player.vy=-520; startAttack("wallup",.3);
+        player.vx = 560*away; player.vy=-720; startAttack("wallup",.34);
       }else if(input.y > .35){
-        player.vx = 420*away; player.vy=470; startAttack("walldown",.3);
+        player.vx = 560*away; player.vy=620; startAttack("walldown",.34);
       }else{
-        player.vx = 680*away; player.vy=-70; startAttack("wallside",.28);
+        player.vx = 840*away; player.vy=-90; startAttack("wallside",.32);
       }
       return;
     }
 
     if(!player.grounded){
-      startAttack("airkick",.25);
+      startAttack("airkick",.28);
+      player.vx += 170*player.facing;
       return;
     }
 
     const backwards = input.x && Math.sign(input.x) === -player.facing;
     if(input.y < -.38){
-      startAttack("upper",.28);
-      player.vy = -80;
+      startAttack("upper",.30);
+      player.vy = -210;
+      player.vx += 90*player.facing;
       return;
     }
     if(backwards){
-      startAttack("somersault",.38);
-      player.vx = -320*player.facing;
-      player.vy = -260;
+      startAttack("somersault",.42);
+      player.vx = -470*player.facing;
+      player.vy = -390;
       return;
     }
     if(player.dashTimer>0){
       startAttack("dashbody",.34);
-      player.vx = 760*player.facing;
+      player.vx = 980*player.facing;
       return;
     }
 
     if(player.comboWindow>0) player.comboStep = (player.comboStep%3)+1;
     else player.comboStep=1;
-    startAttack(["","jab","straight","kickup"][player.comboStep], player.comboStep===3?.34:.22);
+    startAttack(["","jab","straight","kickup"][player.comboStep], player.comboStep===3?.36:.23);
+    if(player.comboStep===1) player.vx += 120*player.facing;
+    if(player.comboStep===2) player.vx += 180*player.facing;
+    if(player.comboStep===3) player.vx += 150*player.facing;
   }
 
   function doClaw(){
@@ -291,20 +323,23 @@
       player.clawTrail=.28;
       return;
     }
-    wallProbe();
-    if(player.onWall && !player.grounded){
+    const contact = wallProbe();
+    if(contact && !player.grounded){
       player.wallLatched = true;
-      player.wallLatchSide = player.onWall;
-      player.vx=0; player.vy=0;
+      player.wallLatchSide = contact.side;
+      player.wallRef = contact.platform;
+      snapToWall(contact);
+      player.vx=0;
+      player.vy=0;
     }
   }
 
   function doDash(){
     if(player.dashCooldown>0) return;
     if(!player.grounded && !player.airDashAvailable) return;
-    player.dashTimer=.19;
-    player.dashCooldown=.34;
-    player.vx = 880*player.facing;
+    player.dashTimer=.20;
+    player.dashCooldown=.30;
+    player.vx = 1080*player.facing;
     if(!player.grounded) {
       player.vy *= .25;
       player.airDashAvailable=false;
@@ -315,21 +350,22 @@
     if(player.wallLatched){
       const away = -player.wallLatchSide;
       player.wallLatched=false;
-      player.vx=540*away;
-      player.vy=-780;
+      player.wallRef=null;
+      player.vx=650*away;
+      player.vy=-900;
       player.facing=away;
       return;
     }
     wallProbe();
     if(player.onWall && !player.grounded){
       const away=-player.onWall;
-      player.vx=520*away;
-      player.vy=-760;
+      player.vx=630*away;
+      player.vy=-880;
       player.facing=away;
       return;
     }
     if(player.grounded){
-      player.vy=-800;
+      player.vy=-920;
       player.grounded=false;
     }
   }
@@ -354,30 +390,38 @@
     if(input.jumpPressed) doJump();
 
     if(player.wallLatched){
-      wallProbe();
-      if(!player.onWall || player.grounded){
+      const p = player.wallRef;
+      const verticalStillValid = p &&
+        player.y + player.h - 8 > p.y &&
+        player.y + 8 < p.y + p.h;
+
+      if(!verticalStillValid || player.grounded){
         player.wallLatched=false;
+        player.wallRef=null;
       } else {
+        const contact = {side:player.wallLatchSide, platform:p};
+        snapToWall(contact);
         player.vx=0;
         player.vy=0;
-        const side=player.wallLatchSide;
-        player.x += side*1.5;
 
-        // 「爪を押しながら上」で登る。爪を連打しても少しずつ登る。
+        // 爪＋上はしっかり登る。爪連打は一段ずつ強く登る。
         if(input.claw && input.y<-.25){
-          player.vy=-210;
+          player.vy=-360;
         } else if(input.clawPressed){
-          player.vy=-280;
+          player.vy=-430;
+        } else if(input.y>0.65){
+          player.vy=150;
         }
       }
     } else {
-      const maxSpeed = player.grounded ? 430 : 390;
-      const accel = player.grounded ? 2600 : 1500;
+      const maxSpeed = player.grounded ? 500 : 455;
+      const accel = player.grounded ? 5200 : 2300;
       if(player.dashTimer<=0 && player.attackType!=="dashbody" && player.attackType!=="dashclaw"){
         const target=input.x*maxSpeed;
         player.vx += Math.sign(target-player.vx)*Math.min(Math.abs(target-player.vx), accel*dt);
         if(Math.abs(input.x)<.05 && player.grounded){
-          player.vx *= Math.pow(.0008,dt);
+          player.vx *= Math.pow(.0000005,dt);
+          if(Math.abs(player.vx)<18) player.vx=0;
         }
       }
       if(Math.abs(input.x)>.15) player.facing=Math.sign(input.x);
@@ -385,11 +429,18 @@
       player.vy = Math.min(player.vy,1200);
     }
 
-    player.x += player.vx*dt;
-    resolveCollisions("x");
+    if(!player.wallLatched){
+      player.x += player.vx*dt;
+      resolveCollisions("x");
+    }
     player.y += player.vy*dt;
     resolveCollisions("y");
-    wallProbe();
+
+    if(player.wallLatched && player.wallRef){
+      snapToWall({side:player.wallLatchSide, platform:player.wallRef});
+    } else {
+      wallProbe();
+    }
 
     processHit();
 
