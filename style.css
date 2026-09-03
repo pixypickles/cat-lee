@@ -72,7 +72,7 @@ html, body {
 #stickBase {
   position: absolute;
   left: max(20px, env(safe-area-inset-left));
-  bottom: max(24px, env(safe-area-inset-bottom));
+  bottom: max(78px, calc(env(safe-area-inset-bottom) + 54px));
   width: min(34vw, 180px);
   height: min(34vw, 180px);
   max-width: 180px;
@@ -154,5 +154,13 @@ html, body {
     bottom: max(68px, calc(env(safe-area-inset-bottom) + 48px));
     transform: scale(.92);
     transform-origin: right bottom;
+  }
+}
+
+
+/* v0.7: lift left stick to match raised action buttons */
+@media (max-height: 520px) {
+  #stickBase {
+    bottom: max(70px, calc(env(safe-area-inset-bottom) + 48px));
   }
 }

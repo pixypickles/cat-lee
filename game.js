@@ -319,10 +319,10 @@
   }
   function doClaw(){
     if(player.dashTimer>0 && player.attackTimer<=0){
-      startAttack("dashclaw",.34);
+      startAttack("dashclaw",.38);
       player.dashTimer=0;
-      player.vx=620*player.facing;
-      player.clawTrail=.28;
+      player.vx=700*player.facing;
+      player.clawTrail=.34;
       return;
     }
 
@@ -347,9 +347,9 @@
   function doDash(){
     if(player.dashCooldown>0) return;
     if(!player.grounded && !player.airDashAvailable) return;
-    player.dashTimer=.115;
+    player.dashTimer=.155;
     player.dashCooldown=.30;
-    player.vx = 940*player.facing;
+    player.vx = 980*player.facing;
     if(!player.grounded) {
       player.vy *= .25;
       player.airDashAvailable=false;
@@ -433,7 +433,7 @@
     } else {
       const maxSpeed = player.grounded ? 500 : 455;
       const accel = player.grounded ? 5200 : 2300;
-      if(player.dashTimer<=0 && player.attackType!=="dashbody" && player.attackType!=="dashclaw"){
+      if(player.dashTimer<=0 && !["dashbody","dashclaw"].includes(player.attackType)){
         const target=input.x*maxSpeed;
         player.vx += Math.sign(target-player.vx)*Math.min(Math.abs(target-player.vx), accel*dt);
         if(Math.abs(input.x)<.05 && player.grounded){
@@ -508,8 +508,8 @@
   function drawBackground(){
     const w=innerWidth,h=innerHeight;
     const g=ctx.createLinearGradient(0,0,0,h);
-    g.addColorStop(0,"#121827");
-    g.addColorStop(1,"#26364a");
+    g.addColorStop(0,"#26354a");
+    g.addColorStop(1,"#52697d");
     ctx.fillStyle=g;
     ctx.fillRect(0,0,w,h);
 
@@ -530,9 +530,9 @@
 
   function drawPlatform(p){
     const x=p.x-camera.x, y=p.y-camera.y;
-    ctx.fillStyle="#263238";
+    ctx.fillStyle="#354751";
     roundedRect(x,y,p.w,p.h,8); ctx.fill();
-    ctx.fillStyle="#50616c";
+    ctx.fillStyle="#7f96a3";
     ctx.fillRect(x,y,p.w,10);
     ctx.strokeStyle="rgba(255,255,255,.08)";
     ctx.lineWidth=2;
@@ -569,109 +569,103 @@
     const x=p.x-camera.x+p.w/2;
     const y=p.y-camera.y+p.h/2;
     const f=p.facing;
-    const bob=p.grounded && p.attackTimer<=0 ? Math.sin(p.animTime*12)*1.5 : 0;
-
-    const durations = {
-      jab:.23, straight:.23, kickup:.36, upper:.30, somersault:.42,
-      airkick:.28, dashbody:.30, dashclaw:.34, clawstrike:.30, wallup:.34, wallside:.32, walldown:.34
-    };
-    const dur=durations[p.attackType]||.25;
-    const t=p.attackTimer>0 ? 1-Math.max(0,Math.min(1,p.attackTimer/dur)) : 0;
-    const strike=Math.sin(Math.min(1,t)*Math.PI);
-
-    let bodyRot=0, leanX=0, bodyY=0, headRot=0;
-    let fs={x:18,y:-8}, bs={x:-16,y:-8};
-    let fh={x:34,y:-2}, bh={x:-27,y:8};
-    let fhip={x:13,y:24}, bhip={x:-14,y:24};
-    let ff={x:18,y:47}, bf={x:-17,y:47};
     const type=p.attackType;
 
-    if(type==="jab"){
-      bodyRot=-.14*strike; leanX=7*strike;
-      fh={x:58+8*strike,y:-11}; bh={x:-18,y:-2};
-      ff={x:31,y:47}; bf={x:-28,y:48}; headRot=.06*strike;
-    }else if(type==="straight"){
-      bodyRot=-.32*strike; leanX=12*strike;
-      fs={x:22,y:-13}; fh={x:70+10*strike,y:-14}; bh={x:-10,y:-3};
-      ff={x:38,y:47}; bf={x:-34,y:49}; headRot=.12*strike;
-    }else if(type==="kickup"){
-      bodyRot=.22*strike; leanX=-7*strike; bodyY=-6*strike;
-      fh={x:25,y:-7}; bh={x:-31,y:-14};
-      ff={x:39+14*strike,y:-18-48*strike}; bf={x:-26,y:49}; headRot=-.12*strike;
-    }else if(type==="upper"){
-      bodyRot=-.22*strike; leanX=7*strike; bodyY=-12*strike;
-      fh={x:30+12*strike,y:-64-18*strike}; bh={x:-25,y:2};
-      ff={x:28,y:47}; bf={x:-29,y:50}; headRot=.1*strike;
-    }else if(type==="somersault"){
-      bodyRot=-Math.PI*1.65*t; bodyY=-18*Math.sin(Math.PI*t);
-      fh={x:24,y:-17}; bh={x:-24,y:-18};
-      ff={x:49,y:-8}; bf={x:-35,y:31}; headRot=.22;
-    }else if(type==="airkick"){
-      bodyRot=-.05*strike; leanX=13*strike;
-      fh={x:-3,y:-22}; bh={x:-28,y:-6};
-      ff={x:68+12*strike,y:4}; bf={x:-31,y:38}; headRot=.14*strike;
-    }else if(type==="dashbody"){
-      bodyRot=-.42*strike; leanX=21*strike; bodyY=9*strike;
-      fs={x:22,y:-4}; fh={x:65+14*strike,y:13}; bh={x:-22,y:-10};
-      ff={x:44,y:48}; bf={x:-38,y:50}; headRot=.18*strike;
-    }else if(type==="clawstrike"){
-      torsoX=-5*wind+8*hit;
-      torsoTilt=-.05*hit;
-      fh={x:12-20*wind+54*hit-15*recover,y:-18+14*hit};
-      bh={x:-26,y:5};
-      ff={x:20+12*hit,y:47}; bf={x:-27,y:49};
-      headX=-2*wind+4*hit;
-    }else if(type==="dashclaw"){
-      bodyRot=-.55*strike; leanX=11*strike;
-      fs={x:19,y:-15}; fh={x:68+12*strike,y:-36+31*strike}; bh={x:-30,y:8};
-      ff={x:38,y:47}; bf={x:-34,y:50}; headRot=.21*strike;
-    }else if(type==="wallup"){
-      bodyRot=-.46*strike; bodyY=-6*strike;
-      ff={x:62,y:-23-23*strike}; bf={x:-24,y:40};
-      fh={x:7,y:-26}; bh={x:-27,y:-9};
-    }else if(type==="wallside"){
-      bodyRot=-.34*strike; leanX=15*strike;
-      ff={x:75+12*strike,y:3}; bf={x:-28,y:36};
-      fh={x:-5,y:-21}; bh={x:-31,y:-5};
-    }else if(type==="walldown"){
-      bodyRot=.38*strike; leanX=10*strike;
-      ff={x:55+10*strike,y:53+20*strike}; bf={x:-25,y:23};
-      fh={x:4,y:-26}; bh={x:-30,y:-6};
-    }else if(p.wallLatched){
-      bodyRot=.07*p.wallLatchSide;
-      fh={x:31,y:-19}; bh={x:25,y:8};
-      ff={x:26,y:34}; bf={x:19,y:49};
-    }else if(!p.grounded){
-      bodyRot=-.09;
-      fh={x:27,y:-13}; bh={x:-26,y:-10};
-      ff={x:28,y:36}; bf={x:-28,y:43};
-    }else if(Math.abs(p.vx)>60){
-      const run=Math.sin(p.animTime*18);
-      bodyRot=-.09*Math.sign(p.vx)*f;
-      fh={x:30,y:-5+11*run}; bh={x:-26,y:4-11*run};
-      ff={x:24+19*run,y:48}; bf={x:-20-19*run,y:48};
+    const durations={
+      jab:.26, straight:.29, kickup:.42, somersault:.44,
+      airkick:.30, dashbody:.30, dashclaw:.38, clawstrike:.30,
+      wallup:.34, wallside:.32, walldown:.34
+    };
+    const dur=durations[type]||.3;
+    const u=p.attackTimer>0 ? 1-Math.max(0,Math.min(1,p.attackTimer/dur)) : 0;
+
+    function pulse(a,b){
+      if(u<=a || u>=b) return 0;
+      const q=(u-a)/(b-a);
+      return Math.sin(q*Math.PI);
     }
+
+    const wind=pulse(.02,.34);
+    const hit=pulse(.20,.67);
+    const recover=pulse(.54,.96);
+
+    let tx=0, ty=0, tilt=0, crouch=0;
+    let frontHand={x:31,y:-10}, backHand={x:-15,y:5};
+    let frontFoot={x:30,y:49}, backFoot={x:-26,y:50};
+    let frontKnee={x:24,y:27}, backKnee={x:-18,y:28};
+
+    if(type==="jab"){
+      tx=-2*wind+7*hit;
+      frontHand={x:27-8*wind+42*hit-10*recover,y:-11};
+      frontFoot={x:31+8*hit,y:49};
+      backFoot={x:-29,y:50};
+    }else if(type==="straight"){
+      tx=-5*wind+14*hit-4*recover;
+      crouch=2*wind;
+      frontHand={x:21-12*wind+58*hit-15*recover,y:-13};
+      frontFoot={x:30-3*wind+22*hit,y:49};
+      backFoot={x:-31-5*hit,y:50};
+      tilt=-.045*hit;
+    }else if(type==="kickup"){
+      crouch=7*wind-3*hit;
+      const chamber=Math.max(wind,recover*.8);
+      frontKnee={x:31+10*chamber,y:21-10*chamber};
+      frontFoot={x:35+15*chamber+33*hit,y:47-26*chamber-58*hit+20*recover};
+      backFoot={x:-29,y:50};
+      tx=-4*hit;
+    }else if(type==="airkick"){
+      const chamber=Math.max(wind,recover*.8);
+      frontKnee={x:31+10*chamber,y:22-7*chamber};
+      frontFoot={x:37+18*chamber+43*hit,y:43-18*chamber-22*hit+13*recover};
+      backFoot={x:-30,y:39};
+      tx=10*hit;
+    }else if(type==="dashbody"){
+      crouch=11*wind+7*hit;
+      tx=-5*wind+18*hit;
+      tilt=-.07*hit;
+      frontHand={x:18-9*wind+50*hit,y:6+7*wind};
+      frontFoot={x:30-5*wind+26*hit,y:50};
+      backFoot={x:-35-7*hit,y:50};
+    }else if(type==="clawstrike"){
+      tx=-4*wind+8*hit;
+      frontHand={x:12-18*wind+52*hit-12*recover,y:-20+13*hit};
+      frontFoot={x:32+10*hit,y:49};
+      tilt=-.04*hit;
+    }else if(type==="dashclaw"){
+      tx=-7*wind+14*hit;
+      frontHand={x:6-24*wind+63*hit-15*recover,y:-26+21*hit};
+      frontFoot={x:31+19*hit,y:49};
+      backFoot={x:-34-5*hit,y:50};
+      tilt=-.07*hit;
+    }else if(type==="wallup"){
+      const chamber=Math.max(wind,recover*.75);
+      frontKnee={x:31+10*chamber,y:20-10*chamber};
+      frontFoot={x:36+18*chamber+38*hit,y:44-26*chamber-46*hit+15*recover};
+      backFoot={x:-26,y:39}; tx=5*hit;
+    }else if(type==="wallside"){
+      const chamber=Math.max(wind,recover*.75);
+      frontKnee={x:32+11*chamber,y:23-6*chamber};
+      frontFoot={x:38+20*chamber+52*hit,y:43-15*chamber};
+      backFoot={x:-27,y:38}; tx=10*hit;
+    }else if(type==="walldown"){
+      const chamber=Math.max(wind,recover*.75);
+      frontKnee={x:31+10*chamber,y:24+5*chamber};
+      frontFoot={x:37+17*chamber+40*hit,y:43+16*chamber+28*hit-12*recover};
+      backFoot={x:-27,y:27}; tx=8*hit; ty=4*hit;
+    }
+
+    const bob=p.grounded && p.attackTimer<=0 ? Math.sin(p.animTime*12)*1.2 : 0;
 
     ctx.save();
-    ctx.translate(x+leanX*f,y+bob+bodyY);
+    ctx.translate(x+tx*f,y+bob+ty+crouch);
     ctx.scale(f,1);
-    ctx.scale(1.15,1.15);
+    ctx.scale(1.18,1.18);
 
-    if(p.clawTrail>0){
-      ctx.save();
-      ctx.globalAlpha=p.clawTrail/.28;
-      ctx.strokeStyle="#e8d8ff";
-      ctx.lineWidth=5;
-      ctx.lineCap="round";
-      for(let i=-1;i<=1;i++){
-        ctx.beginPath();
-        ctx.arc(35,-7+i*11,67,Math.PI*1.03,Math.PI*1.82);
-        ctx.stroke();
-      }
-      ctx.restore();
+    if(type==="somersault" && p.attackTimer>0){
+      ctx.rotate(-Math.PI*2*u);
+    }else{
+      ctx.rotate(tilt);
     }
-
-    ctx.rotate(bodyRot);
 
     function limb(x1,y1,x2,y2,x3,y3,width,color){
       ctx.strokeStyle=color;
@@ -679,67 +673,134 @@
       ctx.lineCap="round";
       ctx.lineJoin="round";
       ctx.beginPath();
-      ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineTo(x3,y3); ctx.stroke();
+      ctx.moveTo(x1,y1);
+      ctx.lineTo(x2,y2);
+      ctx.lineTo(x3,y3);
+      ctx.stroke();
     }
 
-    ctx.strokeStyle="#c48757"; ctx.lineWidth=10; ctx.lineCap="round";
+    // tail: side silhouette
+    ctx.strokeStyle="#b9a08b";
+    ctx.lineWidth=10;
+    ctx.lineCap="round";
     ctx.beginPath();
-    ctx.moveTo(-20,22);
-    ctx.quadraticCurveTo(-60+9*Math.sin(p.animTime*7),9,-47,-33);
+    ctx.moveTo(-24,22);
+    ctx.quadraticCurveTo(-61,20,-58,-16);
+    ctx.quadraticCurveTo(-55,-38,-40,-31);
     ctx.stroke();
 
-    let bk={x:(bhip.x+bf.x)/2-5,y:(bhip.y+bf.y)/2};
-    let fk={x:(fhip.x+ff.x)/2+7,y:(fhip.y+ff.y)/2-2};
-    if(["kickup","airkick","wallup","wallside","walldown","somersault"].includes(type) && p.attackTimer>0){
-      fk={x:27,y:18};
-    }
-    limb(bhip.x,bhip.y,bk.x,bk.y,bf.x,bf.y,13,"#202838");
-    limb(fhip.x,fhip.y,fk.x,fk.y,ff.x,ff.y,14,"#202838");
+    // rear leg
+    limb(-15,24,backKnee.x,backKnee.y,backFoot.x,backFoot.y,14,"#b9a08b");
+    // front leg
+    limb(15,24,frontKnee.x,frontKnee.y,frontFoot.x,frontFoot.y,15,"#b9a08b");
 
-    ctx.fillStyle="#1f2a3b";
-    roundedRect(-31,-28,62,60,13); ctx.fill();
-    ctx.strokeStyle="#f4d07b"; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.moveTo(1,-23); ctx.lineTo(1,26); ctx.stroke();
-    ctx.fillStyle="#a52222"; ctx.fillRect(-32,20,64,9);
+    // blue kung-fu jacket, brighter than black so it reads over dark background.
+    ctx.fillStyle="#2f67d8";
+    ctx.beginPath();
+    ctx.moveTo(-26,-25);
+    ctx.lineTo(21,-25);
+    ctx.quadraticCurveTo(31,-18,30,-4);
+    ctx.lineTo(28,28);
+    ctx.lineTo(-28,28);
+    ctx.lineTo(-31,-4);
+    ctx.quadraticCurveTo(-31,-18,-26,-25);
+    ctx.closePath();
+    ctx.fill();
 
-    const fe={x:(fs.x+fh.x)/2+7,y:(fs.y+fh.y)/2};
-    const be={x:(bs.x+bh.x)/2-6,y:(bs.y+bh.y)/2+3};
-    limb(bs.x,bs.y,be.x,be.y,bh.x,bh.y,11,"#c48757");
-    limb(fs.x,fs.y,fe.x,fe.y,fh.x,fh.y,12,"#c48757");
+    // yellow trim
+    ctx.strokeStyle="#f1c64c";
+    ctx.lineWidth=5;
+    ctx.beginPath();
+    ctx.moveTo(-25,-22);
+    ctx.lineTo(17,-22);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(5,-21);
+    ctx.lineTo(7,25);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-26,24);
+    ctx.lineTo(27,24);
+    ctx.stroke();
 
+    // rear arm in guard
+    limb(-14,-7,-23,3,-8,8,12,"#b9a08b");
+    // front arm
+    const elbow={x:(18+frontHand.x)/2+6,y:(-9+frontHand.y)/2};
+    limb(18,-9,elbow.x,elbow.y,frontHand.x,frontHand.y,12,"#b9a08b");
+
+    // neck/collar
+    ctx.fillStyle="#f1c64c";
+    ctx.fillRect(-17,-33,36,9);
+
+    // distinctly side-profile head: oval shifted forward.
     ctx.save();
-    ctx.translate(0,-45);
-    ctx.rotate(headRot-bodyRot*.30);
-    ctx.fillStyle="#c48757";
-    ctx.save();
+    ctx.translate(2,-53);
     ctx.scale(.82,1);
-    ctx.beginPath(); ctx.arc(0,0,29,0,Math.PI*2); ctx.fill();
-    ctx.restore();
-    ctx.beginPath(); ctx.moveTo(-24,-16); ctx.lineTo(-13,-40); ctx.lineTo(-4,-19); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(24,-16); ctx.lineTo(13,-40); ctx.lineTo(4,-19); ctx.fill();
-    ctx.fillStyle="#fff";
-    ctx.beginPath(); ctx.arc(-9,-3,5,0,Math.PI*2); ctx.arc(9,-3,5,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle="#111";
-    ctx.beginPath(); ctx.arc(-8,-3,2.4,0,Math.PI*2); ctx.arc(8,-3,2.4,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle="#7a3f35";
-    ctx.beginPath(); ctx.moveTo(-4,7); ctx.lineTo(4,7); ctx.lineTo(0,12); ctx.fill();
+    ctx.fillStyle="#b9a08b";
+    ctx.beginPath();
+    ctx.ellipse(0,0,31,29,0,0,Math.PI*2);
+    ctx.fill();
     ctx.restore();
 
-    if(type==="dashclaw" && p.attackTimer>0){
+    // ears angled toward profile
+    ctx.fillStyle="#b9a08b";
+    ctx.beginPath();
+    ctx.moveTo(-20,-67); ctx.lineTo(-10,-88); ctx.lineTo(-3,-66); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(7,-67); ctx.lineTo(17,-85); ctx.lineTo(21,-63); ctx.fill();
+
+    // side eye
+    ctx.fillStyle="#151515";
+    ctx.beginPath();
+    ctx.ellipse(10,-56,4,7,0,0,Math.PI*2);
+    ctx.fill();
+
+    // muzzle protrudes forward
+    ctx.fillStyle="#c7b6a8";
+    ctx.beginPath();
+    ctx.ellipse(24,-47,13,10,0,0,Math.PI*2);
+    ctx.fill();
+
+    // nose
+    ctx.fillStyle="#4b342f";
+    ctx.beginPath();
+    ctx.moveTo(33,-51); ctx.lineTo(40,-47); ctx.lineTo(33,-43); ctx.closePath(); ctx.fill();
+
+    // mouth
+    ctx.strokeStyle="#4b342f";
+    ctx.lineWidth=2.5;
+    ctx.beginPath();
+    ctx.arc(22,-42,9,.1,1.55);
+    ctx.stroke();
+
+    // whiskers
+    ctx.lineWidth=2;
+    for(let i=-1;i<=1;i++){
+      ctx.beginPath();
+      ctx.moveTo(28,-44+i*4);
+      ctx.lineTo(44,-42+i*5);
+      ctx.stroke();
+    }
+
+    // claw trails
+    if((type==="clawstrike" || type==="dashclaw") && p.attackTimer>0 && hit>.08){
       ctx.save();
-      ctx.strokeStyle="rgba(255,255,255,.58)";
-      ctx.lineWidth=3;
+      ctx.globalAlpha=Math.min(1,.35+hit);
+      ctx.strokeStyle="#f8f4e8";
+      ctx.lineWidth=3.5;
+      ctx.lineCap="round";
       for(let i=-1;i<=1;i++){
         ctx.beginPath();
-        ctx.moveTo(fh.x-4,fh.y+i*5);
-        ctx.lineTo(fh.x+30,fh.y-14+i*7);
+        ctx.moveTo(frontHand.x-1,frontHand.y+i*5);
+        ctx.lineTo(frontHand.x+34,frontHand.y-12+i*8);
         ctx.stroke();
       }
       ctx.restore();
     }
+
     ctx.restore();
   }
-
   function draw(){
     drawBackground();
     ctx.save();
