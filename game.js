@@ -237,7 +237,8 @@
       case "somersault": hb={x:f>0?p.x-12:p.x+player.w-48,y:p.y+4,w:60,h:72,damage:2,kx:-420*f,ky:-400}; break;
       case "airkick": hb={x:f>0?p.x+p.w-4:p.x-52,y:p.y+22,w:56,h:42,damage:2,kx:320*f,ky:-110}; break;
       case "dashbody": hb={x:f>0?p.x+p.w-2:p.x-64,y:p.y+42,w:68,h:34,damage:3,kx:620*f,ky:-120}; break;
-      case "dashclaw": hb={x:f>0?p.x+p.w-10:p.x-82,y:p.y+14,w:92,h:64,damage:3,kx:520*f,ky:-180}; break;
+      case "dashupper": hb={x:f>0?p.x+p.w-8:p.x-58,y:p.y-12,w:66,h:88,damage:4,kx:300*f,ky:-720}; break;
+      case "dashclaw": hb={x:f>0?p.x+p.w-8:p.x-98,y:p.y+2,w:106,h:p.h-4,damage:4,kx:760*f,ky:-80}; break;
       case "clawstrike": hb={x:f>0?p.x+p.w-8:p.x-70,y:p.y+12,w:78,h:62,damage:2,kx:390*f,ky:-130}; break;
       case "wallup": hb={x:f>0?p.x+p.w-4:p.x-62,y:p.y-34,w:64,h:64,damage:3,kx:420*f,ky:-620}; break;
       case "wallside": hb={x:f>0?p.x+p.w-4:p.x-72,y:p.y+18,w:76,h:46,damage:3,kx:650*f,ky:-120}; break;
@@ -299,9 +300,11 @@
     }
 
     if(player.dashTimer>0){
-      startAttack("dashbody",.30);
-      player.dashTimer=0; // 攻撃へ移行したらダッシュ慣性を終了
-      player.vx = 690*player.facing;
+      // ダッシュ攻撃：低く走り込んでから突き上げるアッパー
+      startAttack("dashupper",.34);
+      player.dashTimer=0;
+      player.vx = 520*player.facing;
+      player.vy = -180;
       return;
     }
 
@@ -316,15 +319,19 @@
   }
   function doClaw(){
     if(player.dashTimer>0 && player.attackTimer<=0){
-      startAttack("dashclaw",.34);
+      startAttack("dashclaw",.30);
       player.dashTimer=0;
-      player.vx=590*player.facing;
-      player.clawTrail=.30;
+      player.dashClawActive=true;
+      player.dashClawTimer=.30;
+      player.invuln=.34;
+      player.vx=1280*player.facing;
+      player.vy=0;
+      player.clawTrail=.34;
       return;
     }
 
     const contact = wallProbe();
-    if(contact && !player.grounded){
+    if(!player.dashClawActive && contact && !player.grounded){
       player.wallLatched = true;
       player.wallLatchSide = contact.side;
       player.wallRef = contact.platform;
@@ -394,16 +401,17 @@
     if(player.attackType==="dashbody" && player.attackTimer>0){
       player.vx *= Math.pow(.002,dt);
     }
-    if(player.attackType==="dashclaw"){
-      if(player.attackTimer>0){
-        player.vx *= Math.pow(.000001,dt);
-        if(player.attackTimer<.12) player.vx*=.45;
-      }else if(player.grounded){
-        player.vx=0;
-      }
+    if(player.attackType==="dashclaw" && !player.dashClawActive && player.grounded){
+      player.vx *= Math.pow(.002,dt);
     }
     player.clawTrail=Math.max(0,player.clawTrail-dt);
     player.lastDirTimer=Math.max(0,player.lastDirTimer-dt);
+    player.dashClawTimer=Math.max(0,player.dashClawTimer-dt);
+    if(player.dashClawActive && player.dashClawTimer<=0){
+      player.dashClawActive=false;
+      player.vx*=0.28;
+      if(player.grounded && Math.abs(player.vx)<80) player.vx=0;
+    }
     if(Math.abs(input.x)>.30){ player.lastDirX=Math.sign(input.x); player.lastDirTimer=.20; }
 
     if(input.attackPressed) doAttack();
@@ -453,7 +461,7 @@
 
     if(!player.wallLatched){
       player.x += player.vx*dt;
-      resolveCollisions("x");
+      if(!player.dashClawActive) resolveCollisions("x");
     }
     const prevY=player.y;
     player.y += player.vy*dt;
@@ -463,6 +471,18 @@
       snapToWall({side:player.wallLatchSide, platform:player.wallRef});
     } else {
       wallProbe();
+    }
+
+    // 地上に戻ったら壁関連状態を必ず解除。時々歩けなくなる原因の残留状態を消す。
+    if(player.grounded){
+      player.wallLatched=false;
+      player.wallRef=null;
+      player.wallLatchSide=0;
+      player.onWall=0;
+      if(Math.abs(input.x)>.08 && player.attackTimer<=0 && !player.dashClawActive){
+        const desired=input.x*470;
+        if(Math.abs(player.vx)<35) player.vx=desired;
+      }
     }
 
     processHit();
@@ -579,7 +599,7 @@
 
     const durations={
       jab:.26, straight:.29, kickup:.42, somersault:.44,
-      airkick:.30, dashbody:.30, dashclaw:.38, clawstrike:.30,
+      airkick:.30, dashbody:.30, dashupper:.34, dashclaw:.30, clawstrike:.30,
       wallup:.34, wallside:.32, walldown:.34
     };
     const dur=durations[type]||.3;
@@ -640,6 +660,13 @@
       frontFoot={x:37+18*chamber+43*hit,y:43-18*chamber-22*hit+13*recover};
       backFoot={x:-30,y:39};
       tx=10*hit;
+    }else if(type==="dashupper"){
+      crouch=13*wind-9*hit;
+      tx=-5*wind+13*hit;
+      tilt=-.05*wind;
+      frontHand={x:20-6*wind+22*hit,y:3+8*wind-62*hit+18*recover};
+      frontKnee={x:24,y:29}; backKnee={x:-18,y:30};
+      frontFoot={x:31+10*hit,y:50}; backFoot={x:-29-6*hit,y:50};
     }else if(type==="dashbody"){
       crouch=11*wind+7*hit;
       tx=-5*wind+18*hit;
@@ -675,8 +702,19 @@
       backFoot={x:-27,y:27}; tx=8*hit; ty=4*hit;
     }
 
-    // 歩行：攻撃していない地上移動では、膝と足先を大きく交互に振る。
-    if(p.grounded && p.attackTimer<=0 && Math.abs(p.vx)>35 && !p.wallLatched){
+    // ダッシュ中は背を低くして前傾。通常走りとは明確にシルエットを変える。
+    if(p.dashTimer>0 && p.attackTimer<=0 && !p.wallLatched){
+      crouch=10;
+      tx=9;
+      tilt=-.11;
+      frontHand={x:24,y:2};
+      backHand={x:-19,y:-2};
+      frontKnee={x:27,y:31}; backKnee={x:-18,y:31};
+      frontFoot={x:41,y:50}; backFoot={x:-30,y:50};
+    }
+
+    // 歩行：攻撃していない地上移動では、膝と足先を交互に振る。
+    if(p.grounded && p.attackTimer<=0 && Math.abs(p.vx)>35 && !p.wallLatched && p.dashTimer<=0){
       const speedRatio=Math.min(1,Math.abs(p.vx)/455);
       const walk=Math.sin(p.animTime*(12+7*speedRatio));
       const liftA=Math.max(0,-walk);
@@ -828,7 +866,7 @@
     ctx.beginPath(); ctx.moveTo(-7,-43); ctx.lineTo(-25,-37); ctx.stroke();
 
     // claw trails
-    if((type==="clawstrike" || type==="dashclaw") && p.attackTimer>0 && hit>.08){
+    if(type==="clawstrike" && p.attackTimer>0 && hit>.08){
       ctx.save();
       ctx.globalAlpha=Math.min(1,.35+hit);
       ctx.strokeStyle="#f8f4e8";
@@ -840,6 +878,24 @@
         ctx.lineTo(frontHand.x+34,frontHand.y-12+i*8);
         ctx.stroke();
       }
+      ctx.restore();
+    }
+
+    if(type==="dashclaw" && p.attackTimer>0){
+      ctx.save();
+      ctx.globalAlpha=.85;
+      ctx.strokeStyle="#f8f4e8";
+      ctx.lineWidth=4.5;
+      ctx.lineCap="round";
+      for(let i=-1;i<=1;i++){
+        const yy=-18+i*22;
+        ctx.beginPath();
+        ctx.moveTo(-20,yy);
+        ctx.lineTo(82,yy+5);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
       ctx.restore();
     }
 
