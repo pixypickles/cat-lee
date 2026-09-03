@@ -762,10 +762,25 @@
     ctx.quadraticCurveTo(-55,-38,-40,-31);
     ctx.stroke();
 
-    // rear leg
-    limb(-15,24,backKnee.x,backKnee.y,backFoot.x,backFoot.y,14,"#b9a08b");
-    // front leg
-    limb(15,24,frontKnee.x,frontKnee.y,frontFoot.x,frontFoot.y,15,"#b9a08b");
+    // 脚そのものを青いズボンとして描く。上から短パンを被せない。
+    // 膝まで太めの青い脚、足先だけ猫の毛色を見せる。
+    const rearAnkle={
+      x:backKnee.x+(backFoot.x-backKnee.x)*.72,
+      y:backKnee.y+(backFoot.y-backKnee.y)*.72
+    };
+    const frontAnkle={
+      x:frontKnee.x+(frontFoot.x-frontKnee.x)*.72,
+      y:frontKnee.y+(frontFoot.y-frontKnee.y)*.72
+    };
+    limb(-15,24,backKnee.x,backKnee.y,rearAnkle.x,rearAnkle.y,16,"#173f8f");
+    limb(15,24,frontKnee.x,frontKnee.y,frontAnkle.x,frontAnkle.y,17,"#173f8f");
+
+    // 裾から出る足先
+    ctx.strokeStyle="#b9a08b";
+    ctx.lineWidth=12;
+    ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(rearAnkle.x,rearAnkle.y); ctx.lineTo(backFoot.x,backFoot.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(frontAnkle.x,frontAnkle.y); ctx.lineTo(frontFoot.x,frontFoot.y); ctx.stroke();
 
     // 奥側の腕は必ず服の後ろに描く。
     if(wallPose){
@@ -828,25 +843,6 @@
       ctx.arc(24,yy-2,2.5,0,Math.PI*2);
       ctx.stroke();
     }
-
-    // ゆったりしたカンフー袴風パンツ。脚そのものではなく衣服に見える太さを持たせる。
-    ctx.fillStyle="#173a79";
-    ctx.beginPath();
-    ctx.moveTo(-25,24);
-    ctx.lineTo(-2,24);
-    ctx.lineTo(-7,39);
-    ctx.lineTo(-23,43);
-    ctx.lineTo(-31,35);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(0,24);
-    ctx.lineTo(26,24);
-    ctx.lineTo(32,35);
-    ctx.lineTo(23,43);
-    ctx.lineTo(7,39);
-    ctx.closePath();
-    ctx.fill();
 
     // 前側の腕だけ服の上に描く。奥側の腕はすでに服の後ろへ描画済み。
     if(wallPose){
