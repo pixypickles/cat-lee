@@ -10,6 +10,8 @@
   };
 
   const platforms = [
+    // 連続した地面：穴へ落ちない
+    {x:0,y:2050,w:WORLD.width,h:150},
     {x:0,y:1920,w:900,h:280},
     {x:980,y:1840,w:540,h:360},
     {x:1600,y:1970,w:520,h:230},
@@ -580,8 +582,12 @@
       }
     }
 
-    if(player.y>WORLD.height+300){
-      Object.assign(player,{x:220,y:1760,vx:0,vy:0,wallLatched:false});
+    if(player.y>WORLD.height+120){
+      player.y=2050-player.h;
+      player.vy=0;
+      player.grounded=true;
+      player.wallLatched=false;
+      player.wallRef=null;
     }
 
     input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
@@ -706,11 +712,11 @@
     if(wallPose){
       const climb = input.y<-.24 ? Math.sin(p.animTime*16) : 0;
       const wallX = 42;
-      frontHand={x:wallX,y:-24 + 10*climb};
-      backHand ={x:wallX-6,y:  4 - 10*climb};
+      frontHand={x:wallX,y:-29 + 8*climb};
+      backHand ={x:wallX-8,y: 11 - 8*climb};
       frontKnee={x:24,y:23}; backKnee={x:18,y:31};
-      frontFoot={x:wallX-1,y:22 - 11*climb};
-      backFoot ={x:wallX-4,y:48 + 11*climb};
+      frontFoot={x:wallX-2,y:21 - 9*climb};
+      backFoot ={x:wallX-5,y:49 + 9*climb};
       tx=-3;
       tilt=.02;
     }
@@ -864,10 +870,10 @@
 
     // 奥側の腕は必ず服の後ろに描く。
     if(wallPose){
-      const rearElbow={x:7,y:3};
-      limb(-12,-7,rearElbow.x,rearElbow.y,backHand.x,backHand.y,11,"#b9a08b");
+      const rearElbow={x:4,y:8};
+      limb(-12,-7,rearElbow.x,rearElbow.y,backHand.x,backHand.y,9,"#b9a08b");
       ctx.fillStyle="#b9a08b";
-      ctx.beginPath(); ctx.ellipse(backHand.x+1,backHand.y,6.5,4.5,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(backHand.x+1,backHand.y,5,3.8,0,0,Math.PI*2); ctx.fill();
     }else{
       limb(-14,-7,-19,2,-10,7,9.5,"#b9a08b");
       ctx.fillStyle="#b9a08b";
@@ -926,10 +932,10 @@
 
     // 前側の腕だけ服の上に描く。奥側の腕はすでに服の後ろへ描画済み。
     if(wallPose){
-      const frontElbow={x:27,y:-8};
-      limb(17,-9,frontElbow.x,frontElbow.y,frontHand.x,frontHand.y,12,"#b9a08b");
+      const frontElbow={x:24,y:-14};
+      limb(17,-9,frontElbow.x,frontElbow.y,frontHand.x,frontHand.y,10,"#b9a08b");
       ctx.fillStyle="#b9a08b";
-      ctx.beginPath(); ctx.ellipse(frontHand.x+1,frontHand.y,7,5,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(frontHand.x+1,frontHand.y,5.5,4,0,0,Math.PI*2); ctx.fill();
     }else{
       const elbow={x:(18+frontHand.x)/2+4,y:(-9+frontHand.y)/2+2};
       limb(18,-9,elbow.x,elbow.y,frontHand.x-3,frontHand.y,10.5,"#b9a08b");
@@ -947,7 +953,7 @@
     // distinctly side-profile head: oval shifted forward.
     ctx.save();
     ctx.translate(2,-53);
-    ctx.scale(.82,1);
+    ctx.scale(.96,.90);
     ctx.fillStyle="#b9a08b";
     ctx.beginPath();
     ctx.ellipse(0,0,31,29,0,0,Math.PI*2);
@@ -957,9 +963,9 @@
     // ears angled toward profile
     ctx.fillStyle="#b9a08b";
     ctx.beginPath();
-    ctx.moveTo(-20,-67); ctx.lineTo(-10,-88); ctx.lineTo(-3,-66); ctx.fill();
+    ctx.moveTo(-22,-66); ctx.lineTo(-12,-86); ctx.lineTo(-4,-65); ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(7,-67); ctx.lineTo(17,-85); ctx.lineTo(21,-63); ctx.fill();
+    ctx.moveTo(8,-66); ctx.lineTo(19,-84); ctx.lineTo(23,-62); ctx.fill();
 
     // side eye
     ctx.fillStyle="#151515";
