@@ -33,7 +33,11 @@
   ];
 
   // 薄い足場：下から通過でき、上からは着地できる
-  for(const p of platforms) p.oneWay = p.h <= 55 && p.w >= 180;
+  for(const p of platforms){
+    p.oneWay = p.h <= 55 && p.w >= 180;
+    // 縦長の細い物体は電柱扱い：移動では素通り、爪では掴まれる
+    p.climbThrough = p.w <= 70 && p.h >= 300;
+  }
 
   const enemies = [
     {x:680,y:1820,w:64,h:82,hp:3,vx:0,flash:0,alive:true,type:"dog"},
@@ -180,6 +184,7 @@
     player.grounded=false;
     player.onWall=0;
     for(const p of platforms){
+      if(p.climbThrough) continue;
       if(!overlap(player,p)) continue;
       if(axis==="x"){
         if(p.oneWay) continue;
@@ -206,6 +211,20 @@
 
     for(const p of platforms){
       if(p.oneWay) continue;
+
+      if(p.climbThrough){
+        const verticalOverlap =
+          player.y + player.h - inset > p.y &&
+          player.y + inset < p.y + p.h;
+        if(!verticalOverlap) continue;
+        const pc=player.x+player.w/2, wc=p.x+p.w/2;
+        if(Math.abs(pc-wc) <= player.w/2 + p.w/2 + pad){
+          // 棒の中心を通り抜けていても、爪を押せば近い側へ吸着
+          return {side: pc <= wc ? 1 : -1, platform:p};
+        }
+        continue;
+      }
+
       const verticalOverlap =
         player.y + player.h - inset > p.y &&
         player.y + inset < p.y + p.h;
@@ -258,6 +277,7 @@
       case "dashupper": hb={x:f>0?p.x+p.w-8:p.x-58,y:p.y-12,w:66,h:88,damage:4,kx:300*f,ky:-720}; break;
       case "dashclaw": hb={x:f>0?p.x+p.w-8:p.x-98,y:p.y+2,w:106,h:p.h-4,damage:4,kx:760*f,ky:-80}; break;
       case "clawstrike": hb={x:f>0?p.x+p.w-8:p.x-70,y:p.y+12,w:78,h:62,damage:2,kx:390*f,ky:-130}; break;
+      case "clawdown": hb={x:f>0?p.x+p.w-6:p.x-64,y:p.y+4,w:70,h:78,damage:2,kx:360*f,ky:180}; break;
       case "wallup": hb={x:f>0?p.x+p.w-4:p.x-62,y:p.y-34,w:64,h:64,damage:3,kx:420*f,ky:-620}; break;
       case "wallside": hb={x:f>0?p.x+p.w-4:p.x-72,y:p.y+18,w:76,h:46,damage:3,kx:650*f,ky:-120}; break;
       case "walldown": hb={x:f>0?p.x+p.w-4:p.x-60,y:p.y+48,w:64,h:62,damage:3,kx:430*f,ky:520}; break;
@@ -335,6 +355,7 @@
         facing:player.facing,
         life:.26,
         maxLife:.26,
+        delay:.10,
         damage:4,
         kx:320*player.facing,
         ky:-760
@@ -357,7 +378,7 @@
         x:player.x+player.w/2 + 54*player.facing,
         y:player.y+player.h*.60,
         facing:player.facing,
-        life:.26,maxLife:.26,damage:4,
+        life:.26,maxLife:.26,delay:.10,damage:4,
         kx:320*player.facing,ky:-760
       });
     }
@@ -388,6 +409,33 @@
         height:player.h*.72
       });
       return;
+    }
+
+    // 派生コンボ：攻撃→攻撃→爪＝通常爪、さらに爪＝振り下ろし爪
+    const clawChainReady = player.attackTimer<=0 || player.attackTimer<.10;
+    if(player.grounded && player.comboWindow>0 && clawChainReady){
+      if(player.comboStep===2){
+        player.comboStep=3;
+        startAttack("clawstrike",.30);
+        player.vx += 115*player.facing;
+        player.clawTrail=.22;
+        return;
+      }
+      if(player.comboStep===3){
+        player.comboStep=4;
+        startAttack("clawdown",.44);
+        player.vx += 90*player.facing;
+        spawnAttackFX({
+          type:"clawDownArc",
+          x:player.x+player.w/2 + 42*player.facing,
+          y:player.y+player.h*.47,
+          facing:player.facing,
+          life:.30,maxLife:.30,delay:.07,
+          damage:4,kx:470*player.facing,
+          rx:72,ry:72
+        });
+        return;
+      }
     }
 
     const contact = wallProbe();
@@ -559,6 +607,10 @@
     // 残像エフェクトの寿命とヒット判定
     for(let i=attackFX.length-1;i>=0;i--){
       const fx=attackFX[i];
+      if((fx.delay||0)>0){
+        fx.delay=Math.max(0,fx.delay-dt);
+        continue;
+      }
       fx.life-=dt;
       if(fx.life<=0){
         attackFX.splice(i,1);
@@ -595,6 +647,23 @@
           e.vx=fx.kx;
           e.flash=.12;
           player.hitStop=.04;
+          if(e.hp<=0) e.alive=false;
+        }
+      }else if(fx.type==="clawDownArc"){
+        // 上前方から下前方へ振り下ろす弧。3本の爪痕の中央を攻撃軌道にする。
+        const progress=1-fx.life/fx.maxLife;
+        const theta=-Math.PI*.72 + progress*Math.PI*.92;
+        const cx=fx.x + Math.cos(theta)*fx.rx*fx.facing;
+        const cy=fx.y + Math.sin(theta)*fx.ry;
+        const hb={x:cx-32,y:cy-28,w:64,h:56};
+        for(const e of enemies){
+          if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
+          fx.hit.add(e);
+          e.hp-=fx.damage;
+          e.vx=fx.kx;
+          e.y+=8;
+          e.flash=.12;
+          player.hitStop=.05;
           if(e.hp<=0) e.alive=false;
         }
       }
@@ -699,6 +768,21 @@
 
   function drawPlatform(p){
     const x=p.x-camera.x, y=p.y-camera.y;
+    if(p.climbThrough){
+      // 当たり判定を持たない「登れる電柱」。見た目も細くして素通り可能だと分かりやすく。
+      const cx=x+p.w/2;
+      ctx.strokeStyle="#4a4e50";
+      ctx.lineWidth=18;
+      ctx.lineCap="round";
+      ctx.beginPath(); ctx.moveTo(cx,y+8); ctx.lineTo(cx,y+p.h); ctx.stroke();
+      ctx.strokeStyle="#7d8589"; ctx.lineWidth=5;
+      ctx.beginPath(); ctx.moveTo(cx-2,y+10); ctx.lineTo(cx-2,y+p.h); ctx.stroke();
+      ctx.strokeStyle="#41474a"; ctx.lineWidth=8;
+      ctx.beginPath(); ctx.moveTo(cx-34,y+38); ctx.lineTo(cx+34,y+38); ctx.stroke();
+      ctx.fillStyle="#697277";
+      ctx.beginPath(); ctx.arc(cx-23,y+38,7,0,Math.PI*2); ctx.arc(cx+23,y+38,7,0,Math.PI*2); ctx.fill();
+      return;
+    }
     ctx.fillStyle="#354751";
     roundedRect(x,y,p.w,p.h,8); ctx.fill();
     ctx.fillStyle="#7f96a3";
@@ -911,6 +995,17 @@
       frontHand={x:12-18*wind+52*hit-12*recover,y:-20+13*hit};
       frontFoot={x:32+10*hit,y:49};
       tilt=-.04*hit;
+    }else if(type==="clawdown"){
+      // 高く振りかぶって、前方下へ大きく爪を振り下ろす
+      tx=-3*wind+10*hit;
+      tilt=.04*wind-.08*hit;
+      frontHand={
+        x:10-8*wind+50*hit,
+        y:-34-34*wind+66*hit
+      };
+      backHand={x:-13,y:-6};
+      frontKnee={x:23,y:29}; backKnee={x:-17,y:30};
+      frontFoot={x:34,y:50}; backFoot={x:-28,y:50};
     }else if(type==="dashclaw"){
       tx=-7*wind+14*hit;
       frontHand={x:6-24*wind+63*hit-15*recover,y:-26+21*hit};
@@ -1203,6 +1298,7 @@
 
     // 攻撃残像
     for(const fx of attackFX){
+      if((fx.delay||0)>0) continue;
       const alpha=Math.max(0,fx.life/fx.maxLife);
       if(fx.type==="upperArc"){
         const progress=1-fx.life/fx.maxLife;
@@ -1229,6 +1325,36 @@
 
         ctx.globalAlpha=.15*alpha;
         ctx.lineWidth=22;
+        ctx.stroke();
+        ctx.restore();
+      }else if(fx.type==="clawDownArc"){
+        const progress=1-fx.life/fx.maxLife;
+        ctx.save();
+        ctx.translate(fx.x-camera.x,fx.y-camera.y);
+        ctx.scale(fx.facing,1);
+        ctx.strokeStyle="#fff";
+        ctx.lineCap="round";
+
+        // 3本の爪痕が、上前方→下前方へ弧を描きながら伸びる
+        const steps=28;
+        const shown=Math.max(3,Math.floor(steps*progress));
+        for(let line=-1;line<=1;line++){
+          ctx.beginPath();
+          for(let j=0;j<=shown;j++){
+            const t=j/steps;
+            const theta=-Math.PI*.72+t*Math.PI*.92;
+            const rrX=fx.rx + line*7;
+            const rrY=fx.ry + line*4;
+            const xx=Math.cos(theta)*rrX;
+            const yy=Math.sin(theta)*rrY + line*7;
+            if(j===0) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy);
+          }
+          ctx.globalAlpha=.48*alpha;
+          ctx.lineWidth=4.5;
+          ctx.stroke();
+        }
+        ctx.globalAlpha=.10*alpha;
+        ctx.lineWidth=11;
         ctx.stroke();
         ctx.restore();
       }else if(fx.type==="dashClawTrail"){
