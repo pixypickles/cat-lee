@@ -604,7 +604,7 @@
     // 登っている間は対角の手足を交互に動かす。
     const wallPose = p.wallLatched && p.attackTimer<=0;
     if(wallPose){
-      const climb = Math.abs(input.y)>.28 ? Math.sin(p.animTime*15) : 0;
+      const climb = input.y<-.24 ? Math.sin(p.animTime*16) : 0;
       const wallX = 42;
       frontHand={x:wallX,y:-24 + 12*climb};
       backHand ={x:wallX-3,y:  3 - 12*climb};
@@ -681,11 +681,12 @@
       const walk=Math.sin(p.animTime*(12+7*speedRatio));
       const liftA=Math.max(0,-walk);
       const liftB=Math.max(0, walk);
-      frontKnee={x:22+14*walk,y:28-7*liftA};
-      backKnee ={x:-18-14*walk,y:29-7*liftB};
-      frontFoot={x:31+25*walk,y:50-12*liftA};
-      backFoot ={x:-27-25*walk,y:50-12*liftB};
-      tx=2*Math.abs(walk);
+      // 歩幅をコンパクトに。横へ開かず、進行方向へ素早く刻む。
+      frontKnee={x:20+7*walk,y:28-6*liftA};
+      backKnee ={x:-16-7*walk,y:29-6*liftB};
+      frontFoot={x:27+13*walk,y:50-9*liftA};
+      backFoot ={x:-24-13*walk,y:50-9*liftB};
+      tx=1.2*Math.abs(walk);
     }
 
     const bob=p.grounded && p.attackTimer<=0 ? Math.sin(p.animTime*12)*1.2 : 0;
