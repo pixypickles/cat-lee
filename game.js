@@ -536,7 +536,7 @@
         const progress=1-fx.life/fx.maxLife;
         // キャット・リーの前方で、下→前→上へ縦の半円。
         // 円の中心自体を前へ置き、背中側には回り込ませない。
-        const theta=-Math.PI/2 + progress*Math.PI;
+        const theta=Math.PI/2 - progress*Math.PI;
         const radiusX=62, radiusY=82;
         const cx=fx.x + Math.cos(theta)*radiusX*fx.facing;
         const cy=fx.y + Math.sin(theta)*radiusY;
@@ -1068,7 +1068,7 @@
         const shown=Math.max(3,Math.floor(steps*progress));
         for(let j=0;j<=shown;j++){
           const t=j/steps;
-          const theta=-Math.PI/2+t*Math.PI;
+          const theta=Math.PI/2-t*Math.PI;
           const x=Math.cos(theta)*62;
           const y=Math.sin(theta)*82;
           if(j===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
