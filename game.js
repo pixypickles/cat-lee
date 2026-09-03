@@ -600,6 +600,21 @@
     let frontFoot={x:30,y:49}, backFoot={x:-26,y:50};
     let frontKnee={x:24,y:27}, backKnee={x:-18,y:28};
 
+    // 壁つかまり：両手両足で壁面をつかむ。
+    // 登っている間は対角の手足を交互に動かす。
+    const wallPose = p.wallLatched && p.attackTimer<=0;
+    if(wallPose){
+      const climb = Math.abs(input.y)>.28 ? Math.sin(p.animTime*15) : 0;
+      const wallX = 42;
+      frontHand={x:wallX,y:-24 + 12*climb};
+      backHand ={x:wallX-3,y:  3 - 12*climb};
+      frontKnee={x:24,y:23}; backKnee={x:18,y:31};
+      frontFoot={x:wallX-1,y:22 - 11*climb};
+      backFoot ={x:wallX-4,y:48 + 11*climb};
+      tx=-3;
+      tilt=.02;
+    }
+
     if(type==="jab"){
       tx=-2*wind+7*hit;
       frontHand={x:27-8*wind+42*hit-10*recover,y:-11};
@@ -729,11 +744,17 @@
     ctx.lineTo(27,24);
     ctx.stroke();
 
-    // rear arm in guard
-    limb(-14,-7,-23,3,-8,8,12,"#b9a08b");
-    // front arm
-    const elbow={x:(18+frontHand.x)/2+6,y:(-9+frontHand.y)/2};
-    limb(18,-9,elbow.x,elbow.y,frontHand.x,frontHand.y,12,"#b9a08b");
+    // arms: on a wall both hands visibly reach the surface
+    if(wallPose){
+      const rearElbow={x:9,y:(-7+backHand.y)/2+2};
+      const frontElbow={x:25,y:(-9+frontHand.y)/2};
+      limb(-12,-7,rearElbow.x,rearElbow.y,backHand.x,backHand.y,12,"#b9a08b");
+      limb(18,-9,frontElbow.x,frontElbow.y,frontHand.x,frontHand.y,12,"#b9a08b");
+    }else{
+      limb(-14,-7,-23,3,-8,8,12,"#b9a08b");
+      const elbow={x:(18+frontHand.x)/2+6,y:(-9+frontHand.y)/2};
+      limb(18,-9,elbow.x,elbow.y,frontHand.x,frontHand.y,12,"#b9a08b");
+    }
 
     // neck/collar
     ctx.fillStyle="#f1c64c";
@@ -780,14 +801,11 @@
     ctx.arc(22,-42,9,.1,1.55);
     ctx.stroke();
 
-    // whiskers
-    ctx.lineWidth=2;
-    for(let i=-1;i<=1;i++){
-      ctx.beginPath();
-      ctx.moveTo(28,-44+i*4);
-      ctx.lineTo(44,-42+i*5);
-      ctx.stroke();
-    }
+    // 髭は鼻先から前へ出さず、頬から後方へ流す
+    ctx.strokeStyle="#4b342f";
+    ctx.lineWidth=2.2;
+    ctx.beginPath(); ctx.moveTo(-8,-48); ctx.lineTo(-25,-51); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-7,-43); ctx.lineTo(-25,-37); ctx.stroke();
 
     // claw trails
     if((type==="clawstrike" || type==="dashclaw") && p.attackTimer>0 && hit>.08){
