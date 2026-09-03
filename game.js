@@ -33,6 +33,9 @@
     {x:3330,y:960,w:70,h:920},
   ];
 
+  // 薄い足場：下から通過でき、上からは着地できる
+  for(const p of platforms) p.oneWay = p.h <= 55 && p.w >= 180;
+
   const enemies = [
     {x:690,y:1470,w:64,h:78,hp:3,vx:0,flash:0,alive:true},
     {x:1270,y:970,w:64,h:78,hp:3,vx:0,flash:0,alive:true},
@@ -155,35 +158,28 @@
     return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
   }
 
-  function resolveCollisions(axis){
-    player.grounded = false;
-    player.onWall = 0;
+  function resolveCollisions(axis, prevY=player.y){
+    player.grounded=false;
+    player.onWall=0;
     for(const p of platforms){
       if(!overlap(player,p)) continue;
       if(axis==="x"){
-        if(player.vx>0){
-          player.x = p.x-player.w;
-          player.vx = 0;
-          player.onWall = 1;
-        }else if(player.vx<0){
-          player.x = p.x+p.w;
-          player.vx = 0;
-          player.onWall = -1;
-        }
+        if(p.oneWay) continue;
+        if(player.vx>0){ player.x=p.x-player.w; player.vx=0; player.onWall=1; }
+        else if(player.vx<0){ player.x=p.x+p.w; player.vx=0; player.onWall=-1; }
       }else{
-        if(player.vy>0){
-          player.y = p.y-player.h;
-          player.vy = 0;
-          player.grounded = true;
-          player.airDashAvailable = true;
-        }else if(player.vy<0){
-          player.y = p.y+p.h;
-          player.vy = 0;
+        if(p.oneWay){
+          const prevBottom=prevY+player.h, nowBottom=player.y+player.h;
+          if(player.vy>=0 && prevBottom<=p.y+10 && nowBottom>=p.y){
+            player.y=p.y-player.h; player.vy=0; player.grounded=true; player.airDashAvailable=true;
+          }
+          continue;
         }
+        if(player.vy>0){ player.y=p.y-player.h; player.vy=0; player.grounded=true; player.airDashAvailable=true; }
+        else if(player.vy<0){ player.y=p.y+p.h; player.vy=0; }
       }
     }
   }
-
   function getWallContact(){
     const pad = 14;
     const inset = 10;
@@ -191,6 +187,7 @@
     const right= {x:player.x+player.w,y:player.y+inset,w:pad,h:player.h-inset*2};
 
     for(const p of platforms){
+      if(p.oneWay) continue;
       const verticalOverlap =
         player.y + player.h - inset > p.y &&
         player.y + inset < p.y + p.h;
@@ -319,10 +316,10 @@
   }
   function doClaw(){
     if(player.dashTimer>0 && player.attackTimer<=0){
-      startAttack("dashclaw",.38);
+      startAttack("dashclaw",.34);
       player.dashTimer=0;
-      player.vx=700*player.facing;
-      player.clawTrail=.34;
+      player.vx=590*player.facing;
+      player.clawTrail=.30;
       return;
     }
 
@@ -397,6 +394,14 @@
     if(player.attackType==="dashbody" && player.attackTimer>0){
       player.vx *= Math.pow(.002,dt);
     }
+    if(player.attackType==="dashclaw"){
+      if(player.attackTimer>0){
+        player.vx *= Math.pow(.000001,dt);
+        if(player.attackTimer<.12) player.vx*=.45;
+      }else if(player.grounded){
+        player.vx=0;
+      }
+    }
     player.clawTrail=Math.max(0,player.clawTrail-dt);
     player.lastDirTimer=Math.max(0,player.lastDirTimer-dt);
     if(Math.abs(input.x)>.30){ player.lastDirX=Math.sign(input.x); player.lastDirTimer=.20; }
@@ -450,8 +455,9 @@
       player.x += player.vx*dt;
       resolveCollisions("x");
     }
+    const prevY=player.y;
     player.y += player.vy*dt;
-    resolveCollisions("y");
+    resolveCollisions("y",prevY);
 
     if(player.wallLatched && player.wallRef){
       snapToWall({side:player.wallLatchSide, platform:player.wallRef});
