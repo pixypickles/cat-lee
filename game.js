@@ -626,8 +626,8 @@
     if(wallPose){
       const climb = input.y<-.24 ? Math.sin(p.animTime*16) : 0;
       const wallX = 42;
-      frontHand={x:wallX,y:-24 + 12*climb};
-      backHand ={x:wallX-3,y:  3 - 12*climb};
+      frontHand={x:wallX,y:-24 + 10*climb};
+      backHand ={x:wallX-6,y:  4 - 10*climb};
       frontKnee={x:24,y:23}; backKnee={x:18,y:31};
       frontFoot={x:wallX-1,y:22 - 11*climb};
       backFoot ={x:wallX-4,y:48 + 11*climb};
@@ -706,7 +706,7 @@
     if(p.dashTimer>0 && p.attackTimer<=0 && !p.wallLatched){
       crouch=10;
       tx=9;
-      tilt=-.11;
+      tilt=.11;
       frontHand={x:24,y:2};
       backHand={x:-19,y:-2};
       frontKnee={x:27,y:31}; backKnee={x:-18,y:31};
@@ -767,6 +767,16 @@
     // front leg
     limb(15,24,frontKnee.x,frontKnee.y,frontFoot.x,frontFoot.y,15,"#b9a08b");
 
+    // 奥側の腕は必ず服の後ろに描く。
+    if(wallPose){
+      const rearElbow={x:7,y:3};
+      limb(-12,-7,rearElbow.x,rearElbow.y,backHand.x,backHand.y,11,"#b9a08b");
+      ctx.fillStyle="#b9a08b";
+      ctx.beginPath(); ctx.ellipse(backHand.x+1,backHand.y,6.5,4.5,0,0,Math.PI*2); ctx.fill();
+    }else{
+      limb(-14,-7,-23,3,-8,8,11,"#b9a08b");
+    }
+
     // blue kung-fu jacket, brighter than black so it reads over dark background.
     ctx.fillStyle="#2f67d8";
     ctx.beginPath();
@@ -796,20 +806,13 @@
     ctx.lineTo(27,24);
     ctx.stroke();
 
-    // arms: on a wall both hands visibly reach the surface
+    // 前側の腕だけ服の上に描く。奥側の腕はすでに服の後ろへ描画済み。
     if(wallPose){
-      // 奥の腕も胸の前で折ってから壁へ。手首だけ浮いて見えない形にする。
-      const rearElbow={x:10,y:5};
       const frontElbow={x:27,y:-8};
-      limb(-10,-7,rearElbow.x,rearElbow.y,backHand.x,backHand.y,11,"#b9a08b");
       limb(17,-9,frontElbow.x,frontElbow.y,frontHand.x,frontHand.y,12,"#b9a08b");
-
-      // 壁に押し当てた手のひら
       ctx.fillStyle="#b9a08b";
-      ctx.beginPath(); ctx.ellipse(backHand.x+1,backHand.y,7,5,0,0,Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.ellipse(frontHand.x+1,frontHand.y,7,5,0,0,Math.PI*2); ctx.fill();
     }else{
-      limb(-14,-7,-23,3,-8,8,12,"#b9a08b");
       const elbow={x:(18+frontHand.x)/2+6,y:(-9+frontHand.y)/2};
       limb(18,-9,elbow.x,elbow.y,frontHand.x,frontHand.y,12,"#b9a08b");
     }
@@ -883,15 +886,29 @@
 
     if(type==="dashclaw" && p.attackTimer>0){
       ctx.save();
-      ctx.globalAlpha=.85;
-      ctx.strokeStyle="#f8f4e8";
-      ctx.lineWidth=4.5;
+      const fade=Math.max(.18,Math.min(.62,p.attackTimer/.30));
+      ctx.globalAlpha=fade;
+      ctx.strokeStyle="#ffffff";
+      ctx.lineWidth=4;
       ctx.lineCap="round";
+
+      // 本線
       for(let i=-1;i<=1;i++){
         const yy=-18+i*22;
         ctx.beginPath();
-        ctx.moveTo(-20,yy);
-        ctx.lineTo(82,yy+5);
+        ctx.moveTo(-24,yy);
+        ctx.lineTo(84,yy+5);
+        ctx.stroke();
+      }
+
+      // 少し後ろに薄い残像
+      ctx.globalAlpha=fade*.35;
+      ctx.lineWidth=7;
+      for(let i=-1;i<=1;i++){
+        const yy=-18+i*22;
+        ctx.beginPath();
+        ctx.moveTo(-48,yy-1);
+        ctx.lineTo(46,yy+4);
         ctx.stroke();
       }
       ctx.restore();
