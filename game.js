@@ -71,6 +71,8 @@
     hitStop:0,
     animTime:0,
     airDashAvailable:true,
+    airKickSide:0,
+    airKickCount:0,
     lastDirX:0, lastDirTimer:0
   };
 
@@ -228,7 +230,7 @@
   function startAttack(type, duration=.24){
     player.attackType = type;
     player.attackTimer = duration;
-    player.comboWindow = .36;
+    player.comboWindow = .58;
   }
 
   function attackHitbox(){
@@ -273,7 +275,8 @@
   }
 
   function doAttack(){
-    if(player.attackTimer>0) return;
+    const airKickChain = !player.grounded && player.attackType==="airkick" && player.attackTimer<.18;
+    if(player.attackTimer>0 && !airKickChain) return;
 
     if(player.wallLatched){
       const away = -player.wallLatchSide;
@@ -300,8 +303,10 @@
     }
 
     if(!player.grounded){
-      startAttack("airkick",.30);
-      player.vx += 260*player.facing;
+      player.airKickSide = 1-player.airKickSide;
+      player.airKickCount++;
+      startAttack("airkick",.27);
+      player.vx += 150*player.facing;
       return;
     }
 
@@ -329,12 +334,23 @@
 
     if(player.comboWindow>0) player.comboStep = (player.comboStep%3)+1;
     else player.comboStep=1;
-    const types=["","jab","straight","kickup"];
+    const types=["","jab","straight","dashupper"];
     const durations=[0,.26,.29,.42];
     startAttack(types[player.comboStep],durations[player.comboStep]);
     if(player.comboStep===1) player.vx += 150*player.facing;
     if(player.comboStep===2) player.vx += 210*player.facing;
-    if(player.comboStep===3) player.vx += 180*player.facing;
+    if(player.comboStep===3){
+      player.vx += 150*player.facing;
+      player.vy=-150;
+      spawnAttackFX({
+        type:"upperArc",
+        x:player.x+player.w/2 + 54*player.facing,
+        y:player.y+player.h*.60,
+        facing:player.facing,
+        life:.26,maxLife:.26,damage:4,
+        kx:320*player.facing,ky:-760
+      });
+    }
   }
   function doClaw(){
     if(player.dashTimer>0 && player.attackTimer<=0){
@@ -413,8 +429,16 @@
       return;
     }
     if(player.grounded){
-      player.vy=-980;
+      if(player.dashTimer>0){
+        // ダッシュジャンプ：勢いを残して通常より高く遠くへ
+        player.vy=-1180;
+        player.vx=Math.max(Math.abs(player.vx),820)*player.facing;
+        player.dashTimer=0;
+      }else{
+        player.vy=-980;
+      }
       player.grounded=false;
+      player.airKickCount=0;
     }
   }
 
@@ -509,6 +533,7 @@
 
     // 地上に戻ったら壁関連状態を必ず解除。時々歩けなくなる原因の残留状態を消す。
     if(player.grounded){
+      player.airKickCount=0;
       player.wallLatched=false;
       player.wallRef=null;
       player.wallLatchSide=0;
@@ -758,10 +783,17 @@
       tx=-4*hit;
     }else if(type==="airkick"){
       const chamber=Math.max(wind,recover*.8);
-      frontKnee={x:31+10*chamber,y:22-7*chamber};
-      frontFoot={x:37+18*chamber+43*hit,y:43-18*chamber-22*hit+13*recover};
-      backFoot={x:-30,y:39};
-      tx=10*hit;
+      if(p.airKickSide===0){
+        frontKnee={x:31+10*chamber,y:22-7*chamber};
+        frontFoot={x:37+18*chamber+43*hit,y:43-18*chamber-22*hit+13*recover};
+        backFoot={x:-30,y:39};
+      }else{
+        // 反対脚で蹴る。交互に見えるよう前後脚の役割を入れ替える。
+        backKnee={x:25+9*chamber,y:23-7*chamber};
+        backFoot={x:32+17*chamber+40*hit,y:42-17*chamber-21*hit+13*recover};
+        frontFoot={x:-25,y:40};
+      }
+      tx=9*hit;
     }else if(type==="dashupper"){
       crouch=13*wind-9*hit;
       tx=-5*wind+13*hit;
