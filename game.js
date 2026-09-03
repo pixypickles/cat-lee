@@ -317,8 +317,8 @@
       // 下から上へ半円を描くパンチ残像。見た目と同じ軌道に当たり判定。
       spawnAttackFX({
         type:"upperArc",
-        x:player.x+player.w/2,
-        y:player.y+player.h*.62,
+        x:player.x+player.w/2 + 54*player.facing,
+        y:player.y+player.h*.60,
         facing:player.facing,
         life:.26,
         maxLife:.26,
@@ -534,12 +534,13 @@
 
       if(fx.type==="upperArc"){
         const progress=1-fx.life/fx.maxLife;
-        // 下→前→上へ半円
-        const angle=Math.PI*.15 + progress*Math.PI*.85;
-        const radius=78;
-        const cx=fx.x + Math.cos(angle)*radius*fx.facing;
-        const cy=fx.y - Math.sin(angle)*radius;
-        const hb={x:cx-28,y:cy-28,w:56,h:56};
+        // キャット・リーの前方で、下→前→上へ縦の半円。
+        // 円の中心自体を前へ置き、背中側には回り込ませない。
+        const theta=-Math.PI/2 + progress*Math.PI;
+        const radiusX=62, radiusY=82;
+        const cx=fx.x + Math.cos(theta)*radiusX*fx.facing;
+        const cy=fx.y + Math.sin(theta)*radiusY;
+        const hb={x:cx-30,y:cy-30,w:60,h:60};
         for(const e of enemies){
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
@@ -972,12 +973,12 @@
     ctx.ellipse(23,-47,11,9,0,0,Math.PI*2);
     ctx.fill();
 
-    // 横顔の鼻：進行方向へ尖る三角形
+    // 鼻：横顔でも三角の尖った先端は真下へ向ける
     ctx.fillStyle="#8b5548";
     ctx.beginPath();
-    ctx.moveTo(31,-52);
-    ctx.lineTo(41,-47);
-    ctx.lineTo(31,-42);
+    ctx.moveTo(28,-51);
+    ctx.lineTo(38,-51);
+    ctx.lineTo(33,-42);
     ctx.closePath();
     ctx.fill();
 
@@ -1053,8 +1054,6 @@
       const alpha=Math.max(0,fx.life/fx.maxLife);
       if(fx.type==="upperArc"){
         const progress=1-fx.life/fx.maxLife;
-        const startA=Math.PI*.12;
-        const endA=startA+Math.max(.15,progress)*Math.PI*.88;
         ctx.save();
         ctx.translate(fx.x-camera.x,fx.y-camera.y);
         ctx.scale(fx.facing,1);
@@ -1062,10 +1061,21 @@
         ctx.strokeStyle="#f7f0df";
         ctx.lineWidth=13;
         ctx.lineCap="round";
+
+        // 前方に張り出す縦半円。下から拳の上までをなぞる。
         ctx.beginPath();
-        ctx.arc(0,0,78,-endA,-startA);
+        const steps=24;
+        const shown=Math.max(3,Math.floor(steps*progress));
+        for(let j=0;j<=shown;j++){
+          const t=j/steps;
+          const theta=-Math.PI/2+t*Math.PI;
+          const x=Math.cos(theta)*62;
+          const y=Math.sin(theta)*82;
+          if(j===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
         ctx.stroke();
-        ctx.globalAlpha=.18*alpha;
+
+        ctx.globalAlpha=.15*alpha;
         ctx.lineWidth=22;
         ctx.stroke();
         ctx.restore();
