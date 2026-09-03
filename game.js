@@ -896,11 +896,9 @@
       }
       ctx.restore();
     }
-      ctx.restore();
-    }
-
     ctx.restore();
   }
+
   function draw(){
     drawBackground();
     ctx.save();
