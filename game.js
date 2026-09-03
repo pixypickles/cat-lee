@@ -774,37 +774,79 @@
       ctx.fillStyle="#b9a08b";
       ctx.beginPath(); ctx.ellipse(backHand.x+1,backHand.y,6.5,4.5,0,0,Math.PI*2); ctx.fill();
     }else{
-      limb(-14,-7,-23,3,-8,8,11,"#b9a08b");
+      limb(-14,-7,-19,2,-10,7,9.5,"#b9a08b");
+      ctx.fillStyle="#b9a08b";
+      ctx.beginPath(); ctx.ellipse(-8,7,7,6,.2,0,Math.PI*2); ctx.fill();
     }
 
-    // blue kung-fu jacket, brighter than black so it reads over dark background.
-    ctx.fillStyle="#2f67d8";
+    // カンフー上着：立ち襟・前合わせ・裾広がり・盤扣（飾り紐）
+    ctx.fillStyle="#2566d8";
     ctx.beginPath();
-    ctx.moveTo(-26,-25);
-    ctx.lineTo(21,-25);
-    ctx.quadraticCurveTo(31,-18,30,-4);
-    ctx.lineTo(28,28);
-    ctx.lineTo(-28,28);
-    ctx.lineTo(-31,-4);
-    ctx.quadraticCurveTo(-31,-18,-26,-25);
+    ctx.moveTo(-27,-24);
+    ctx.quadraticCurveTo(-35,-14,-32,2);
+    ctx.lineTo(-30,29);
+    ctx.lineTo(30,29);
+    ctx.lineTo(28,-4);
+    ctx.quadraticCurveTo(27,-17,18,-24);
+    ctx.lineTo(8,-27);
+    ctx.lineTo(-18,-27);
     ctx.closePath();
     ctx.fill();
 
-    // yellow trim
+    // 立ち襟
+    ctx.fillStyle="#f1c64c";
+    ctx.beginPath();
+    ctx.moveTo(-19,-31);
+    ctx.lineTo(17,-31);
+    ctx.lineTo(20,-23);
+    ctx.lineTo(-20,-23);
+    ctx.closePath();
+    ctx.fill();
+
+    // 前合わせと裾
     ctx.strokeStyle="#f1c64c";
-    ctx.lineWidth=5;
+    ctx.lineWidth=4.5;
+    ctx.lineCap="round";
     ctx.beginPath();
-    ctx.moveTo(-25,-22);
-    ctx.lineTo(17,-22);
+    ctx.moveTo(5,-23);
+    ctx.quadraticCurveTo(12,-15,9,-4);
+    ctx.lineTo(10,25);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(5,-21);
-    ctx.lineTo(7,25);
+    ctx.moveTo(-27,25);
+    ctx.lineTo(29,25);
     ctx.stroke();
+
+    // 盤扣：横向きの飾り紐を3本
+    ctx.lineWidth=3.8;
+    for(const yy of [-14,-3,8]){
+      ctx.beginPath();
+      ctx.moveTo(9,yy);
+      ctx.lineTo(22,yy-2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(24,yy-2,2.5,0,Math.PI*2);
+      ctx.stroke();
+    }
+
+    // ゆったりしたカンフー袴風パンツ。脚そのものではなく衣服に見える太さを持たせる。
+    ctx.fillStyle="#173a79";
     ctx.beginPath();
-    ctx.moveTo(-26,24);
-    ctx.lineTo(27,24);
-    ctx.stroke();
+    ctx.moveTo(-25,24);
+    ctx.lineTo(-2,24);
+    ctx.lineTo(-7,39);
+    ctx.lineTo(-23,43);
+    ctx.lineTo(-31,35);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0,24);
+    ctx.lineTo(26,24);
+    ctx.lineTo(32,35);
+    ctx.lineTo(23,43);
+    ctx.lineTo(7,39);
+    ctx.closePath();
+    ctx.fill();
 
     // 前側の腕だけ服の上に描く。奥側の腕はすでに服の後ろへ描画済み。
     if(wallPose){
@@ -813,8 +855,13 @@
       ctx.fillStyle="#b9a08b";
       ctx.beginPath(); ctx.ellipse(frontHand.x+1,frontHand.y,7,5,0,0,Math.PI*2); ctx.fill();
     }else{
-      const elbow={x:(18+frontHand.x)/2+6,y:(-9+frontHand.y)/2};
-      limb(18,-9,elbow.x,elbow.y,frontHand.x,frontHand.y,12,"#b9a08b");
+      const elbow={x:(18+frontHand.x)/2+4,y:(-9+frontHand.y)/2+2};
+      limb(18,-9,elbow.x,elbow.y,frontHand.x-3,frontHand.y,10.5,"#b9a08b");
+      // 握り拳：丸すぎず、胸前にコンパクトに構える
+      ctx.fillStyle="#b9a08b";
+      ctx.beginPath();
+      ctx.ellipse(frontHand.x,frontHand.y,8,7,-.25,0,Math.PI*2);
+      ctx.fill();
     }
 
     // neck/collar
@@ -847,13 +894,17 @@
     // muzzle protrudes forward
     ctx.fillStyle="#c7b6a8";
     ctx.beginPath();
-    ctx.ellipse(24,-47,13,10,0,0,Math.PI*2);
+    ctx.ellipse(23,-47,11,9,0,0,Math.PI*2);
     ctx.fill();
 
-    // nose
-    ctx.fillStyle="#4b342f";
+    // 横顔の鼻：進行方向へ尖る三角形
+    ctx.fillStyle="#8b5548";
     ctx.beginPath();
-    ctx.moveTo(33,-51); ctx.lineTo(40,-47); ctx.lineTo(33,-43); ctx.closePath(); ctx.fill();
+    ctx.moveTo(31,-52);
+    ctx.lineTo(41,-47);
+    ctx.lineTo(31,-42);
+    ctx.closePath();
+    ctx.fill();
 
     // mouth
     ctx.strokeStyle="#4b342f";
