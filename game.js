@@ -409,31 +409,22 @@
       return;
     }
 
-    // 派生コンボ：攻撃→攻撃→爪＝通常爪、さらに爪＝振り下ろし爪
+    // 派生コンボ：攻撃→攻撃→爪＝振り下ろし爪
     const clawChainReady = player.attackTimer<=0 || player.attackTimer<.10;
-    if(player.grounded && player.comboWindow>0 && clawChainReady){
-      if(player.comboStep===2){
-        player.comboStep=3;
-        startAttack("clawstrike",.30);
-        player.vx += 115*player.facing;
-        player.clawTrail=.22;
-        return;
-      }
-      if(player.comboStep===3){
-        player.comboStep=4;
-        startAttack("clawdown",.44);
-        player.vx += 90*player.facing;
-        spawnAttackFX({
-          type:"clawDownArc",
-          x:player.x+player.w/2 + 42*player.facing,
-          y:player.y+player.h*.47,
-          facing:player.facing,
-          life:.30,maxLife:.30,delay:.07,
-          damage:4,kx:470*player.facing,
-          rx:72,ry:72
-        });
-        return;
-      }
+    if(player.grounded && player.comboWindow>0 && clawChainReady && player.comboStep===2){
+      player.comboStep=3;
+      startAttack("clawdown",.44);
+      player.vx += 90*player.facing;
+      spawnAttackFX({
+        type:"clawDownArc",
+        x:player.x+player.w/2 + 46*player.facing,
+        y:player.y+player.h*.46,
+        facing:player.facing,
+        life:.32,maxLife:.32,delay:.07,
+        damage:4,kx:470*player.facing,
+        rx:88,ry:86
+      });
+      return;
     }
 
     const contact = wallProbe();
@@ -888,12 +879,18 @@
     ctx.strokeStyle="#303947"; ctx.lineWidth=9;
     ctx.beginPath(); ctx.moveTo(17,7); ctx.lineTo(25,14); ctx.stroke();
 
-    // HP
+    // HP：敵本体が画面内に入ってから、頭上すぐ近くに表示
     ctx.setTransform(1,0,0,1,0,0);
-    ctx.fillStyle="rgba(0,0,0,.35)";
-    ctx.fillRect(x+4,y-18,e.w-8,6);
-    ctx.fillStyle="#f85";
-    ctx.fillRect(x+4,y-18,(e.w-8)*Math.max(0,e.hp/5),6);
+    const bodyVisible =
+      x + e.w > 0 && x < innerWidth &&
+      y + e.h > 0 && y < innerHeight;
+    if(bodyVisible){
+      const barY=y-7;
+      ctx.fillStyle="rgba(0,0,0,.35)";
+      ctx.fillRect(x+8,barY,e.w-16,5);
+      ctx.fillStyle="#f85";
+      ctx.fillRect(x+8,barY,(e.w-16)*Math.max(0,e.hp/5),5);
+    }
 
     ctx.restore();
   }
@@ -1341,14 +1338,14 @@
           for(let j=0;j<=shown;j++){
             const t=j/steps;
             const theta=-Math.PI*.72+t*Math.PI*.92;
-            const rrX=fx.rx + line*7;
-            const rrY=fx.ry + line*4;
+            const rrX=fx.rx + line*10;
+            const rrY=fx.ry + line*7;
             const xx=Math.cos(theta)*rrX;
-            const yy=Math.sin(theta)*rrY + line*7;
+            const yy=Math.sin(theta)*rrY + line*10;
             if(j===0) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy);
           }
           ctx.globalAlpha=.48*alpha;
-          ctx.lineWidth=4.5;
+          ctx.lineWidth=5.5;
           ctx.stroke();
         }
         ctx.globalAlpha=.10*alpha;
