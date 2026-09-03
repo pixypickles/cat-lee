@@ -675,6 +675,19 @@
       backFoot={x:-27,y:27}; tx=8*hit; ty=4*hit;
     }
 
+    // 歩行：攻撃していない地上移動では、膝と足先を大きく交互に振る。
+    if(p.grounded && p.attackTimer<=0 && Math.abs(p.vx)>35 && !p.wallLatched){
+      const speedRatio=Math.min(1,Math.abs(p.vx)/455);
+      const walk=Math.sin(p.animTime*(12+7*speedRatio));
+      const liftA=Math.max(0,-walk);
+      const liftB=Math.max(0, walk);
+      frontKnee={x:22+14*walk,y:28-7*liftA};
+      backKnee ={x:-18-14*walk,y:29-7*liftB};
+      frontFoot={x:31+25*walk,y:50-12*liftA};
+      backFoot ={x:-27-25*walk,y:50-12*liftB};
+      tx=2*Math.abs(walk);
+    }
+
     const bob=p.grounded && p.attackTimer<=0 ? Math.sin(p.animTime*12)*1.2 : 0;
 
     ctx.save();
@@ -746,10 +759,16 @@
 
     // arms: on a wall both hands visibly reach the surface
     if(wallPose){
-      const rearElbow={x:9,y:(-7+backHand.y)/2+2};
-      const frontElbow={x:25,y:(-9+frontHand.y)/2};
-      limb(-12,-7,rearElbow.x,rearElbow.y,backHand.x,backHand.y,12,"#b9a08b");
-      limb(18,-9,frontElbow.x,frontElbow.y,frontHand.x,frontHand.y,12,"#b9a08b");
+      // 奥の腕も胸の前で折ってから壁へ。手首だけ浮いて見えない形にする。
+      const rearElbow={x:10,y:5};
+      const frontElbow={x:27,y:-8};
+      limb(-10,-7,rearElbow.x,rearElbow.y,backHand.x,backHand.y,11,"#b9a08b");
+      limb(17,-9,frontElbow.x,frontElbow.y,frontHand.x,frontHand.y,12,"#b9a08b");
+
+      // 壁に押し当てた手のひら
+      ctx.fillStyle="#b9a08b";
+      ctx.beginPath(); ctx.ellipse(backHand.x+1,backHand.y,7,5,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(frontHand.x+1,frontHand.y,7,5,0,0,Math.PI*2); ctx.fill();
     }else{
       limb(-14,-7,-23,3,-8,8,12,"#b9a08b");
       const elbow={x:(18+frontHand.x)/2+6,y:(-9+frontHand.y)/2};
