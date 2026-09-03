@@ -69,7 +69,8 @@
     clawTrail:0,
     hitStop:0,
     animTime:0,
-    airDashAvailable:true
+    airDashAvailable:true,
+    lastDirX:0, lastDirTimer:0
   };
 
   const camera = {x:0,y:0};
@@ -268,54 +269,29 @@
 
   function doAttack(){
     if(player.attackTimer>0) return;
-
     if(player.wallLatched){
-      const away = -player.wallLatchSide;
-      player.facing = away;
-      player.wallLatched = false;
-      if(input.y < -.35){
-        player.vx = 560*away; player.vy=-720; startAttack("wallup",.34);
-      }else if(input.y > .35){
-        player.vx = 560*away; player.vy=620; startAttack("walldown",.34);
-      }else{
-        player.vx = 840*away; player.vy=-90; startAttack("wallside",.32);
-      }
+      const away=-player.wallLatchSide; player.facing=away; player.wallLatched=false; player.wallRef=null;
+      if(input.y<-.35){ player.vx=560*away; player.vy=-720; startAttack("wallup",.38); }
+      else if(input.y>.35){ player.vx=560*away; player.vy=620; startAttack("walldown",.38); }
+      else { player.vx=840*away; player.vy=-90; startAttack("wallside",.36); }
       return;
     }
-
-    if(!player.grounded){
-      startAttack("airkick",.28);
-      player.vx += 170*player.facing;
-      return;
-    }
-
-    const backwards = input.x && Math.sign(input.x) === -player.facing;
-    if(input.y < -.38){
-      startAttack("upper",.30);
-      player.vy = -210;
-      player.vx += 90*player.facing;
-      return;
-    }
+    const dir=Math.abs(input.x)>.25?Math.sign(input.x):(player.lastDirTimer>0?player.lastDirX:0);
+    const backwards=dir!==0 && dir===-player.facing;
+    // 後ろ+攻撃を最優先。直前0.20秒の後ろ入力も受付し、空中でも出せる。
     if(backwards){
-      startAttack("somersault",.42);
-      player.vx = -470*player.facing;
-      player.vy = -390;
-      return;
+      startAttack("somersault",.52); player.vx=-620*player.facing;
+      player.vy=player.grounded?-520:-390; player.grounded=false; return;
     }
-    if(player.dashTimer>0){
-      startAttack("dashbody",.34);
-      player.vx = 980*player.facing;
-      return;
-    }
-
-    if(player.comboWindow>0) player.comboStep = (player.comboStep%3)+1;
-    else player.comboStep=1;
-    startAttack(["","jab","straight","kickup"][player.comboStep], player.comboStep===3?.36:.23);
-    if(player.comboStep===1) player.vx += 120*player.facing;
-    if(player.comboStep===2) player.vx += 180*player.facing;
-    if(player.comboStep===3) player.vx += 150*player.facing;
+    if(!player.grounded){ startAttack("airkick",.38); player.vx+=300*player.facing; return; }
+    if(input.y<-.38){ startAttack("upper",.40); player.vy=-300; player.vx+=90*player.facing; return; }
+    if(player.dashTimer>0){ startAttack("dashbody",.42); player.vx=1160*player.facing; return; }
+    if(player.comboWindow>0) player.comboStep=(player.comboStep%3)+1; else player.comboStep=1;
+    const types=["","jab","straight","kickup"], d=[0,.32,.38,.54]; startAttack(types[player.comboStep],d[player.comboStep]);
+    if(player.comboStep===1) player.vx+=210*player.facing;
+    if(player.comboStep===2) player.vx+=290*player.facing;
+    if(player.comboStep===3) player.vx+=280*player.facing;
   }
-
   function doClaw(){
     if(player.dashTimer>0 && player.attackTimer<=0){
       startAttack("dashclaw",.38);
@@ -383,6 +359,8 @@
     player.dashCooldown=Math.max(0,player.dashCooldown-dt);
     player.invuln=Math.max(0,player.invuln-dt);
     player.clawTrail=Math.max(0,player.clawTrail-dt);
+    player.lastDirTimer=Math.max(0,player.lastDirTimer-dt);
+    if(Math.abs(input.x)>.30){ player.lastDirX=Math.sign(input.x); player.lastDirTimer=.20; }
 
     if(input.attackPressed) doAttack();
     if(input.clawPressed) doClaw();
@@ -590,7 +568,7 @@
       fh={x:24,y:-17}; bh={x:-24,y:-18};
       ff={x:49,y:-8}; bf={x:-35,y:31}; headRot=.22;
     }else if(type==="airkick"){
-      bodyRot=-.40*strike; leanX=13*strike;
+      bodyRot=-.05*strike; leanX=13*strike;
       fh={x:-3,y:-22}; bh={x:-28,y:-6};
       ff={x:68+12*strike,y:4}; bf={x:-31,y:38}; headRot=.14*strike;
     }else if(type==="dashbody"){
