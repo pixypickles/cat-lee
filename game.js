@@ -10,41 +10,37 @@
   };
 
   const platforms = [
-    // 連続した地面：穴へ落ちない
-    {x:0,y:2050,w:WORLD.width,h:150},
-    {x:0,y:1920,w:900,h:280},
-    {x:980,y:1840,w:540,h:360},
-    {x:1600,y:1970,w:520,h:230},
-    {x:2210,y:1760,w:480,h:440},
-    {x:2780,y:1880,w:600,h:320},
-    {x:3480,y:1700,w:720,h:500},
+    {x:0,y:1920,w:920,h:280},
+    {x:920,y:1900,w:720,h:300},
+    {x:1640,y:1940,w:820,h:260},
+    {x:2460,y:1890,w:760,h:310},
+    {x:3220,y:1930,w:980,h:270},
 
-    {x:420,y:1550,w:330,h:50},
-    {x:820,y:1320,w:300,h:50},
-    {x:1190,y:1050,w:280,h:50},
-    {x:1550,y:780,w:340,h:50},
-    {x:2050,y:1080,w:300,h:50},
-    {x:2450,y:820,w:330,h:50},
-    {x:2920,y:560,w:330,h:50},
-    {x:3420,y:900,w:300,h:50},
-    {x:3780,y:620,w:300,h:50},
+    {x:520,y:1640,w:300,h:46},
+    {x:1120,y:1560,w:360,h:46},
+    {x:2020,y:1610,w:320,h:46},
+    {x:2850,y:1540,w:360,h:46},
+    {x:3520,y:1620,w:300,h:46},
 
-    {x:1420,y:1180,w:70,h:660},
-    {x:1930,y:870,w:70,h:900},
-    {x:2690,y:650,w:70,h:1110},
-    {x:3330,y:960,w:70,h:920},
+    {x:860,y:1480,w:64,h:420},
+    {x:1580,y:1450,w:64,h:490},
+    {x:2410,y:1500,w:64,h:390},
+    {x:3170,y:1420,w:64,h:470},
+
+    {x:2560,y:1360,w:250,h:42},
+    {x:2920,y:1270,w:240,h:42},
+    {x:3330,y:1390,w:260,h:42}
   ];
 
   // 薄い足場：下から通過でき、上からは着地できる
   for(const p of platforms) p.oneWay = p.h <= 55 && p.w >= 180;
 
   const enemies = [
-    {x:690,y:1470,w:64,h:78,hp:3,vx:0,flash:0,alive:true},
-    {x:1270,y:970,w:64,h:78,hp:3,vx:0,flash:0,alive:true},
-    {x:1710,y:1890,w:64,h:78,hp:4,vx:0,flash:0,alive:true},
-    {x:2310,y:1680,w:64,h:78,hp:4,vx:0,flash:0,alive:true},
-    {x:3000,y:480,w:64,h:78,hp:5,vx:0,flash:0,alive:true},
-    {x:3600,y:1620,w:64,h:78,hp:5,vx:0,flash:0,alive:true},
+    {x:680,y:1820,w:64,h:82,hp:3,vx:0,flash:0,alive:true,type:"dog"},
+    {x:1320,y:1800,w:64,h:82,hp:3,vx:0,flash:0,alive:true,type:"rabbit"},
+    {x:1880,y:1860,w:64,h:82,hp:4,vx:0,flash:0,alive:true,type:"fox"},
+    {x:2700,y:1810,w:64,h:82,hp:4,vx:0,flash:0,alive:true,type:"boar"},
+    {x:3420,y:1850,w:64,h:82,hp:5,vx:0,flash:0,alive:true,type:"dog"}
   ];
 
   const input = {
@@ -582,12 +578,8 @@
       }
     }
 
-    if(player.y>WORLD.height+120){
-      player.y=2050-player.h;
-      player.vy=0;
-      player.grounded=true;
-      player.wallLatched=false;
-      player.wallRef=null;
+    if(player.y>WORLD.height+300){
+      Object.assign(player,{x:220,y:1760,vx:0,vy:0,wallLatched:false});
     }
 
     input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
@@ -660,22 +652,46 @@
     ctx.translate(x+e.w/2,y+e.h/2);
     if(e.flash>0) ctx.globalAlpha=.45;
 
-    ctx.fillStyle="#d86b4e";
-    roundedRect(-25,-22,50,48,10); ctx.fill();
-    ctx.fillStyle="#1b2430";
-    roundedRect(-30,10,60,26,9); ctx.fill();
+    const colors={dog:"#b87954",rabbit:"#c9c0bb",fox:"#d87645",boar:"#8f6d63"};
+    const c=colors[e.type]||"#b87954";
+
+    ctx.fillStyle="#303947";
+    roundedRect(-25,7,50,34,10); ctx.fill();
+    ctx.strokeStyle="#303947"; ctx.lineWidth=10; ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(-14,34); ctx.lineTo(-18,48); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(14,34); ctx.lineTo(18,48); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-20,14); ctx.lineTo(-33,28); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(20,14); ctx.lineTo(33,28); ctx.stroke();
+
+    ctx.fillStyle=c;
+    ctx.beginPath(); ctx.ellipse(0,-17,27,24,0,0,Math.PI*2); ctx.fill();
+
+    if(e.type==="rabbit"){
+      ctx.beginPath(); ctx.ellipse(-10,-43,8,20,-.1,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(10,-43,8,20,.1,0,Math.PI*2); ctx.fill();
+    }else if(e.type==="fox"){
+      ctx.beginPath(); ctx.moveTo(-22,-30); ctx.lineTo(-10,-49); ctx.lineTo(-3,-31); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(22,-30); ctx.lineTo(10,-49); ctx.lineTo(3,-31); ctx.fill();
+    }else if(e.type==="boar"){
+      ctx.beginPath(); ctx.ellipse(0,-7,20,12,0,0,Math.PI*2); ctx.fill();
+    }else{
+      ctx.beginPath(); ctx.moveTo(-22,-29); ctx.lineTo(-15,-45); ctx.lineTo(-5,-31); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(22,-29); ctx.lineTo(15,-45); ctx.lineTo(5,-31); ctx.fill();
+    }
+
     ctx.fillStyle="#fff";
-    ctx.beginPath(); ctx.arc(-10,-8,5,0,Math.PI*2); ctx.arc(10,-8,5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-8,-19,5,0,Math.PI*2); ctx.arc(8,-19,5,0,Math.PI*2); ctx.fill();
     ctx.fillStyle="#111";
-    ctx.beginPath(); ctx.arc(-10,-8,2,0,Math.PI*2); ctx.arc(10,-8,2,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-7,-19,2.3,0,Math.PI*2); ctx.arc(7,-19,2.3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#4a342e";
+    ctx.beginPath(); ctx.ellipse(0,-7,5,4,0,0,Math.PI*2); ctx.fill();
 
     ctx.fillStyle="rgba(0,0,0,.35)";
-    ctx.fillRect(-28,-48,56,7);
+    ctx.fillRect(-28,-59,56,7);
     ctx.fillStyle="#f85";
-    ctx.fillRect(-28,-48,56*Math.max(0,e.hp/5),7);
+    ctx.fillRect(-28,-59,56*Math.max(0,e.hp/5),7);
     ctx.restore();
   }
-
   function drawCatLee(){
     const p=player;
     const x=p.x-camera.x+p.w/2;
@@ -712,11 +728,11 @@
     if(wallPose){
       const climb = input.y<-.24 ? Math.sin(p.animTime*16) : 0;
       const wallX = 42;
-      frontHand={x:wallX,y:-29 + 8*climb};
-      backHand ={x:wallX-8,y: 11 - 8*climb};
+      frontHand={x:wallX,y:-28 + 9*climb};
+      backHand ={x:wallX-8,y: 10 - 9*climb};
       frontKnee={x:24,y:23}; backKnee={x:18,y:31};
-      frontFoot={x:wallX-2,y:21 - 9*climb};
-      backFoot ={x:wallX-5,y:49 + 9*climb};
+      frontFoot={x:wallX-1,y:22 - 10*climb};
+      backFoot ={x:wallX-5,y:48 + 10*climb};
       tx=-3;
       tilt=.02;
     }
@@ -870,10 +886,10 @@
 
     // 奥側の腕は必ず服の後ろに描く。
     if(wallPose){
-      const rearElbow={x:4,y:8};
-      limb(-12,-7,rearElbow.x,rearElbow.y,backHand.x,backHand.y,9,"#b9a08b");
+      const rearElbow={x:5,y:6};
+      limb(-12,-7,rearElbow.x,rearElbow.y,backHand.x,backHand.y,9.5,"#b9a08b");
       ctx.fillStyle="#b9a08b";
-      ctx.beginPath(); ctx.ellipse(backHand.x+1,backHand.y,5,3.8,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(backHand.x+1,backHand.y,5.2,4.1,0,0,Math.PI*2); ctx.fill();
     }else{
       limb(-14,-7,-19,2,-10,7,9.5,"#b9a08b");
       ctx.fillStyle="#b9a08b";
@@ -932,10 +948,10 @@
 
     // 前側の腕だけ服の上に描く。奥側の腕はすでに服の後ろへ描画済み。
     if(wallPose){
-      const frontElbow={x:24,y:-14};
-      limb(17,-9,frontElbow.x,frontElbow.y,frontHand.x,frontHand.y,10,"#b9a08b");
+      const frontElbow={x:25,y:-10};
+      limb(17,-9,frontElbow.x,frontElbow.y,frontHand.x,frontHand.y,10.5,"#b9a08b");
       ctx.fillStyle="#b9a08b";
-      ctx.beginPath(); ctx.ellipse(frontHand.x+1,frontHand.y,5.5,4,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(frontHand.x+1,frontHand.y,5.8,4.4,0,0,Math.PI*2); ctx.fill();
     }else{
       const elbow={x:(18+frontHand.x)/2+4,y:(-9+frontHand.y)/2+2};
       limb(18,-9,elbow.x,elbow.y,frontHand.x-3,frontHand.y,10.5,"#b9a08b");
@@ -952,20 +968,20 @@
 
     // distinctly side-profile head: oval shifted forward.
     ctx.save();
-    ctx.translate(2,-53);
-    ctx.scale(.96,.90);
+    ctx.translate(2,-52);
+    ctx.scale(.94,.88);
     ctx.fillStyle="#b9a08b";
     ctx.beginPath();
-    ctx.ellipse(0,0,31,29,0,0,Math.PI*2);
+    ctx.ellipse(0,0,32,29,0,0,Math.PI*2);
     ctx.fill();
     ctx.restore();
 
     // ears angled toward profile
     ctx.fillStyle="#b9a08b";
     ctx.beginPath();
-    ctx.moveTo(-22,-66); ctx.lineTo(-12,-86); ctx.lineTo(-4,-65); ctx.fill();
+    ctx.moveTo(-20,-67); ctx.lineTo(-10,-88); ctx.lineTo(-3,-66); ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(8,-66); ctx.lineTo(19,-84); ctx.lineTo(23,-62); ctx.fill();
+    ctx.moveTo(7,-67); ctx.lineTo(17,-85); ctx.lineTo(21,-63); ctx.fill();
 
     // side eye
     ctx.fillStyle="#151515";
