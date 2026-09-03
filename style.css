@@ -164,3 +164,14 @@ html, body {
     bottom: max(70px, calc(env(safe-area-inset-bottom) + 48px));
   }
 }
+
+
+#versionText {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.24);
+  font-size: 9px;
+  font-weight: 700;
+  opacity: .62;
+  letter-spacing: .02em;
+}

@@ -77,6 +77,14 @@
   };
 
   const camera = {x:0,y:0};
+
+  // 攻撃エフェクト兼ヒット判定。短時間だけ残る。
+  const attackFX = [];
+  function spawnAttackFX(fx){
+    fx.hit = new Set();
+    attackFX.push(fx);
+  }
+
   let last = performance.now();
 
   function resizeCanvas(){
@@ -301,10 +309,23 @@
 
     if(player.dashTimer>0){
       // ダッシュ攻撃：低く走り込んでから突き上げるアッパー
-      startAttack("dashupper",.34);
+      startAttack("dashupper",.42);
       player.dashTimer=0;
       player.vx = 520*player.facing;
       player.vy = -180;
+
+      // 下から上へ半円を描くパンチ残像。見た目と同じ軌道に当たり判定。
+      spawnAttackFX({
+        type:"upperArc",
+        x:player.x+player.w/2,
+        y:player.y+player.h*.62,
+        facing:player.facing,
+        life:.26,
+        maxLife:.26,
+        damage:4,
+        kx:320*player.facing,
+        ky:-760
+      });
       return;
     }
 
@@ -327,6 +348,21 @@
       player.vx=1280*player.facing;
       player.vy=0;
       player.clawTrail=.34;
+
+      // 体の高さに残る3本の爪痕そのものを攻撃判定にする。
+      spawnAttackFX({
+        type:"dashClawTrail",
+        x:player.x+player.w/2,
+        y:player.y+player.h/2,
+        facing:player.facing,
+        life:.34,
+        maxLife:.34,
+        damage:4,
+        kx:780*player.facing,
+        ky:-90,
+        length:150,
+        height:player.h*.72
+      });
       return;
     }
 
@@ -351,9 +387,9 @@
   function doDash(){
     if(player.dashCooldown>0) return;
     if(!player.grounded && !player.airDashAvailable) return;
-    player.dashTimer=.155;
+    player.dashTimer=.26;
     player.dashCooldown=.30;
-    player.vx = 980*player.facing;
+    player.vx = 1010*player.facing;
     if(!player.grounded) {
       player.vy *= .25;
       player.airDashAvailable=false;
@@ -486,6 +522,49 @@
     }
 
     processHit();
+
+    // 残像エフェクトの寿命とヒット判定
+    for(let i=attackFX.length-1;i>=0;i--){
+      const fx=attackFX[i];
+      fx.life-=dt;
+      if(fx.life<=0){
+        attackFX.splice(i,1);
+        continue;
+      }
+
+      if(fx.type==="upperArc"){
+        const progress=1-fx.life/fx.maxLife;
+        // 下→前→上へ半円
+        const angle=Math.PI*.15 + progress*Math.PI*.85;
+        const radius=78;
+        const cx=fx.x + Math.cos(angle)*radius*fx.facing;
+        const cy=fx.y - Math.sin(angle)*radius;
+        const hb={x:cx-28,y:cy-28,w:56,h:56};
+        for(const e of enemies){
+          if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
+          fx.hit.add(e);
+          e.hp-=fx.damage;
+          e.vx=fx.kx;
+          e.y-=8;
+          e.flash=.12;
+          player.hitStop=.045;
+          if(e.hp<=0) e.alive=false;
+        }
+      }else if(fx.type==="dashClawTrail"){
+        // 発生位置から進行方向へ伸びる体高サイズの帯
+        const left = fx.facing>0 ? fx.x-18 : fx.x-fx.length+18;
+        const hb={x:left,y:fx.y-fx.height/2,w:fx.length,h:fx.height};
+        for(const e of enemies){
+          if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
+          fx.hit.add(e);
+          e.hp-=fx.damage;
+          e.vx=fx.kx;
+          e.flash=.12;
+          player.hitStop=.04;
+          if(e.hp<=0) e.alive=false;
+        }
+      }
+    }
 
     for(const e of enemies){
       if(!e.alive) continue;
@@ -968,6 +1047,54 @@
     ctx.save();
     for(const p of platforms) drawPlatform(p);
     for(const e of enemies) drawEnemy(e);
+
+    // 攻撃残像
+    for(const fx of attackFX){
+      const alpha=Math.max(0,fx.life/fx.maxLife);
+      if(fx.type==="upperArc"){
+        const progress=1-fx.life/fx.maxLife;
+        const startA=Math.PI*.12;
+        const endA=startA+Math.max(.15,progress)*Math.PI*.88;
+        ctx.save();
+        ctx.translate(fx.x-camera.x,fx.y-camera.y);
+        ctx.scale(fx.facing,1);
+        ctx.globalAlpha=.22+.42*alpha;
+        ctx.strokeStyle="#f7f0df";
+        ctx.lineWidth=13;
+        ctx.lineCap="round";
+        ctx.beginPath();
+        ctx.arc(0,0,78,-endA,-startA);
+        ctx.stroke();
+        ctx.globalAlpha=.18*alpha;
+        ctx.lineWidth=22;
+        ctx.stroke();
+        ctx.restore();
+      }else if(fx.type==="dashClawTrail"){
+        ctx.save();
+        ctx.translate(fx.x-camera.x,fx.y-camera.y);
+        ctx.scale(fx.facing,1);
+        for(let i=-1;i<=1;i++){
+          const yy=i*(fx.height/3);
+          ctx.globalAlpha=.34*alpha;
+          ctx.strokeStyle="#ffffff";
+          ctx.lineWidth=5;
+          ctx.lineCap="round";
+          ctx.beginPath();
+          ctx.moveTo(-12,yy);
+          ctx.lineTo(fx.length-18,yy+4);
+          ctx.stroke();
+
+          ctx.globalAlpha=.12*alpha;
+          ctx.lineWidth=10;
+          ctx.beginPath();
+          ctx.moveTo(-35,yy);
+          ctx.lineTo(fx.length-52,yy+3);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
     drawCatLee();
 
     // Goal marker
