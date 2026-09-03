@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#12151f" />
+  <title>CAT LEE Prototype</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="gameWrap">
+    <canvas id="game" width="1280" height="720"></canvas>
+
+    <div id="hud">
+      <div class="brand">CAT LEE</div>
+      <div id="stateText">READY</div>
+    </div>
+
+    <div id="touchControls">
+      <div id="stickZone" class="controlZone">
+        <div id="stickBase">
+          <div id="stickKnob"></div>
+        </div>
+      </div>
+
+      <div id="buttons">
+        <button class="action attack" data-action="attack"><span>攻撃</span></button>
+        <button class="action claw" data-action="claw"><span>爪</span></button>
+        <button class="action dash" data-action="dash"><span>ダッシュ</span></button>
+        <button class="action jump" data-action="jump"><span>ジャンプ</span></button>
+      </div>
+    </div>
+
+    <div id="help">
+      <div><b>PC:</b> WASD / 矢印 = 移動　J=攻撃　K=爪　L=ダッシュ　Space=ジャンプ</div>
+      <div><b>スマホ:</b> 左スティック＋右4ボタン</div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
