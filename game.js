@@ -42,6 +42,16 @@
     {x:2700,y:1810,w:64,h:82,hp:4,vx:0,flash:0,alive:true,type:"boar"},
     {x:3420,y:1850,w:64,h:82,hp:5,vx:0,flash:0,alive:true,type:"dog"}
   ];
+  // 敵AI用の状態
+  for(const e of enemies){
+    e.facing = player.x < e.x ? -1 : 1;
+    e.walkPhase = Math.random()*Math.PI*2;
+    e.attackTimer = 0;
+    e.attackCooldown = .5 + Math.random()*.7;
+    e.attackHitDone = false;
+  }
+
+
 
   const input = {
     x:0, y:0,
@@ -593,8 +603,38 @@
     for(const e of enemies){
       if(!e.alive) continue;
       e.flash=Math.max(0,e.flash-dt);
+      e.attackTimer=Math.max(0,e.attackTimer-dt);
+      e.attackCooldown=Math.max(0,e.attackCooldown-dt);
+      e.walkPhase += dt*8;
+
+      const dx=(player.x+player.w/2)-(e.x+e.w/2);
+      e.facing=dx<0?-1:1;
+      const dist=Math.abs(dx);
+
+      if(e.attackTimer>0){
+        e.vx=0;
+        const elapsed=.62-e.attackTimer;
+        if(!e.attackHitDone && elapsed>.27){
+          e.attackHitDone=true;
+          const hb={x:e.facing>0?e.x+e.w-4:e.x-54,y:e.y-12,w:58,h:e.h+20};
+          if(player.invuln<=0 && overlap(hb,player)){
+            player.vx=420*e.facing;
+            player.vy=-260;
+            player.invuln=.75;
+          }
+        }
+      }else if(dist<92 && e.attackCooldown<=0){
+        e.attackTimer=.62;
+        e.attackCooldown=1.15+Math.random()*.45;
+        e.attackHitDone=false;
+        e.vx=0;
+      }else if(dist<620 && dist>72){
+        e.vx=e.facing*92;
+      }else{
+        e.vx=0;
+      }
+
       e.x += e.vx*dt;
-      e.vx *= Math.pow(.02,dt);
       e.y += 900*dt;
       for(const p of platforms){
         if(overlap(e,p) && e.y+e.h>=p.y && e.y<p.y){
@@ -673,48 +713,106 @@
   function drawEnemy(e){
     if(!e.alive) return;
     const x=e.x-camera.x,y=e.y-camera.y;
+    const walking=Math.abs(e.vx)>10 && e.attackTimer<=0;
+    const step=walking ? Math.sin(e.walkPhase) : 0;
+    const attacking=e.attackTimer>0;
+    const ap=attacking ? 1-e.attackTimer/.62 : 0;
+
     ctx.save();
     ctx.translate(x+e.w/2,y+e.h/2);
+    ctx.scale(e.facing,1);
     if(e.flash>0) ctx.globalAlpha=.45;
 
     const colors={dog:"#b87954",rabbit:"#c9c0bb",fox:"#d87645",boar:"#8f6d63"};
     const c=colors[e.type]||"#b87954";
 
+    // 奥脚
+    ctx.strokeStyle="#28313e"; ctx.lineWidth=10; ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(-10,31); ctx.lineTo(-14-9*step,48); ctx.stroke();
+
+    // 奥腕（体の後ろ）
+    ctx.beginPath(); ctx.moveTo(-16,7); ctx.lineTo(-25,19); ctx.stroke();
+
+    // 人型胴体
     ctx.fillStyle="#303947";
-    roundedRect(-25,7,50,34,10); ctx.fill();
-    ctx.strokeStyle="#303947"; ctx.lineWidth=10; ctx.lineCap="round";
-    ctx.beginPath(); ctx.moveTo(-14,34); ctx.lineTo(-18,48); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(14,34); ctx.lineTo(18,48); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-20,14); ctx.lineTo(-33,28); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(20,14); ctx.lineTo(33,28); ctx.stroke();
+    roundedRect(-24,1,48,37,10); ctx.fill();
 
+    // 前脚：歩行時だけ小さく前後
+    ctx.strokeStyle="#303947"; ctx.lineWidth=11;
+    ctx.beginPath(); ctx.moveTo(11,31); ctx.lineTo(17+9*step,48); ctx.stroke();
+
+    // 横向きの動物顔
     ctx.fillStyle=c;
-    ctx.beginPath(); ctx.ellipse(0,-17,27,24,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(1,-19,25,23,0,0,Math.PI*2); ctx.fill();
 
+    // 耳
     if(e.type==="rabbit"){
-      ctx.beginPath(); ctx.ellipse(-10,-43,8,20,-.1,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(10,-43,8,20,.1,0,Math.PI*2); ctx.fill();
-    }else if(e.type==="fox"){
-      ctx.beginPath(); ctx.moveTo(-22,-30); ctx.lineTo(-10,-49); ctx.lineTo(-3,-31); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(22,-30); ctx.lineTo(10,-49); ctx.lineTo(3,-31); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(-6,-44,7,19,-.1,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(9,-43,7,18,.12,0,Math.PI*2); ctx.fill();
     }else if(e.type==="boar"){
-      ctx.beginPath(); ctx.ellipse(0,-7,20,12,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-13,-35); ctx.lineTo(-6,-48); ctx.lineTo(0,-34); ctx.fill();
     }else{
-      ctx.beginPath(); ctx.moveTo(-22,-29); ctx.lineTo(-15,-45); ctx.lineTo(-5,-31); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(22,-29); ctx.lineTo(15,-45); ctx.lineTo(5,-31); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-14,-34); ctx.lineTo(-5,-49); ctx.lineTo(1,-34); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(9,-34); ctx.lineTo(17,-46); ctx.lineTo(20,-31); ctx.fill();
     }
 
-    ctx.fillStyle="#fff";
-    ctx.beginPath(); ctx.arc(-8,-19,5,0,Math.PI*2); ctx.arc(8,-19,5,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle="#111";
-    ctx.beginPath(); ctx.arc(-7,-19,2.3,0,Math.PI*2); ctx.arc(7,-19,2.3,0,Math.PI*2); ctx.fill();
+    // 前へ出るマズルで横顔を明確に
+    ctx.fillStyle=c;
+    ctx.beginPath(); ctx.ellipse(20,-13,14,10,0,0,Math.PI*2); ctx.fill();
     ctx.fillStyle="#4a342e";
-    ctx.beginPath(); ctx.ellipse(0,-7,5,4,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(30,-17); ctx.lineTo(36,-13); ctx.lineTo(30,-9); ctx.closePath(); ctx.fill();
 
+    // 横顔なので目は前側を主に見せる
+    ctx.fillStyle="#fff";
+    ctx.beginPath(); ctx.ellipse(10,-22,6,6,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#111";
+    ctx.beginPath(); ctx.arc(12,-22,2.5,0,Math.PI*2); ctx.fill();
+
+    // 青龍刀。柄は両手で持ち、攻撃時は頭上→前方へ振り下ろす。
+    ctx.save();
+    let swordAngle;
+    if(attacking){
+      if(ap<.35) swordAngle=-1.75 + (ap/.35)*.25;       // 振りかぶり
+      else swordAngle=-1.50 + ((ap-.35)/.65)*2.15;     // 前へ振り下ろし
+    }else{
+      swordAngle=-.55;
+    }
+    ctx.translate(14,7);
+    ctx.rotate(swordAngle);
+
+    // 手
+    ctx.fillStyle=c;
+    ctx.beginPath(); ctx.arc(0,0,6,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(12,0,5.5,0,Math.PI*2); ctx.fill();
+
+    // 長い柄
+    ctx.strokeStyle="#6b4a2f"; ctx.lineWidth=5; ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(-14,0); ctx.lineTo(58,0); ctx.stroke();
+
+    // 青龍刀の幅広い刃
+    ctx.fillStyle="#d7e0e6";
+    ctx.strokeStyle="#7b8790"; ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(50,-5);
+    ctx.quadraticCurveTo(76,-18,94,-8);
+    ctx.quadraticCurveTo(82,3,57,8);
+    ctx.lineTo(50,4);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    // 前腕
+    ctx.strokeStyle="#303947"; ctx.lineWidth=9;
+    ctx.beginPath(); ctx.moveTo(17,7); ctx.lineTo(25,14); ctx.stroke();
+
+    // HP
+    ctx.setTransform(1,0,0,1,0,0);
     ctx.fillStyle="rgba(0,0,0,.35)";
-    ctx.fillRect(-28,-59,56,7);
+    ctx.fillRect(x+4,y-18,e.w-8,6);
     ctx.fillStyle="#f85";
-    ctx.fillRect(-28,-59,56*Math.max(0,e.hp/5),7);
+    ctx.fillRect(x+4,y-18,(e.w-8)*Math.max(0,e.hp/5),6);
+
     ctx.restore();
   }
   function drawCatLee(){
