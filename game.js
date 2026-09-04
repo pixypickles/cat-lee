@@ -88,6 +88,13 @@
     e.attackHitDone = false;
   }
 
+  // 高所からツボを投げる敵。地上ルートから見え、登って倒せる。
+  const throwers = [
+    {x:1260,y:1476,w:56,h:76,hp:3,alive:true,facing:-1,throwTimer:1.2,flash:0},
+    {x:2980,y:1456,w:56,h:76,hp:3,alive:true,facing:-1,throwTimer:2.0,flash:0}
+  ];
+  const pots = [];
+
   const camera = {x:0,y:0};
 
   // 攻撃エフェクト兼ヒット判定。短時間だけ残る。
@@ -288,7 +295,7 @@
     if(player.attackTimer<=0) return;
     const hb=attackHitbox();
     if(!hb) return;
-    for(const e of enemies){
+    for(const e of [...enemies,...throwers]){
       if(!e.alive || !overlap(hb,e)) continue;
       let mark = hitMemory.get(e);
       if(mark === player.attackType + ":" + Math.floor(player.attackTimer*100)) continue;
@@ -615,7 +622,7 @@
         const cx=fx.x + Math.cos(theta)*radiusX*fx.facing;
         const cy=fx.y + Math.sin(theta)*radiusY;
         const hb={x:cx-30,y:cy-30,w:60,h:60};
-        for(const e of enemies){
+        for(const e of [...enemies,...throwers]){
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
@@ -629,7 +636,7 @@
         // 発生位置から進行方向へ伸びる体高サイズの帯
         const left = fx.facing>0 ? fx.x-18 : fx.x-fx.length+18;
         const hb={x:left,y:fx.y-fx.height/2,w:fx.length,h:fx.height};
-        for(const e of enemies){
+        for(const e of [...enemies,...throwers]){
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
@@ -645,7 +652,7 @@
         const cx=fx.x + Math.cos(theta)*fx.rx*fx.facing;
         const cy=fx.y + Math.sin(theta)*fx.ry;
         const hb={x:cx-32,y:cy-28,w:64,h:56};
-        for(const e of enemies){
+        for(const e of [...enemies,...throwers]){
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
@@ -655,6 +662,53 @@
           player.hitStop=.05;
           if(e.hp<=0) e.alive=false;
         }
+      }
+    }
+
+    // ツボ投げ敵：主人公の方向を向き、一定間隔で放物線投擲
+    for(const e of throwers){
+      if(!e.alive) continue;
+      e.flash=Math.max(0,e.flash-dt);
+      const dx=(player.x+player.w/2)-(e.x+e.w/2);
+      e.facing=dx<0?-1:1;
+      e.throwTimer-=dt;
+      if(Math.abs(dx)<900 && e.throwTimer<=0){
+        const sx=e.x+e.w/2+22*e.facing, sy=e.y+22;
+        const flight=Math.max(.75,Math.min(1.25,Math.abs(dx)/520));
+        pots.push({
+          x:sx,y:sy,w:26,h:28,
+          vx:dx/flight,
+          vy:-520,
+          spin:0,
+          alive:true
+        });
+        e.throwTimer=2.0+Math.random()*.7;
+      }
+    }
+
+    // 投げられたツボ：重力で落下し、地形か主人公に当たると割れる
+    for(let i=pots.length-1;i>=0;i--){
+      const q=pots[i];
+      q.vy+=1050*dt;
+      q.x+=q.vx*dt;
+      q.y+=q.vy*dt;
+      q.spin+=dt*7*(q.vx<0?-1:1);
+
+      let broken=false;
+      if(player.invuln<=0 && overlap(q,player)){
+        player.vx=300*(q.vx<0?-1:1);
+        player.vy=-260;
+        player.invuln=.7;
+        broken=true;
+      }
+      if(!broken){
+        for(const plat of platforms){
+          if(plat.climbThrough) continue;
+          if(overlap(q,plat)){ broken=true; break; }
+        }
+      }
+      if(broken || q.y>WORLD.height+100 || q.x<-100 || q.x>WORLD.width+100){
+        pots.splice(i,1);
       }
     }
 
@@ -753,6 +807,37 @@
       ctx.fill();
     }
     ctx.restore();
+
+    // 街の背景：登れる足場の背後に家・ビルを配置
+    ctx.save();
+    const blocks=[
+      {x:430,y:1290,w:430,h:630},
+      {x:1030,y:1320,w:500,h:580},
+      {x:1940,y:1370,w:430,h:570},
+      {x:2760,y:1260,w:520,h:630},
+      {x:3440,y:1340,w:410,h:590}
+    ];
+    for(const b of blocks){
+      const bx=b.x-camera.x, by=b.y-camera.y;
+      ctx.fillStyle="rgba(43,53,62,.72)";
+      ctx.fillRect(bx,by,b.w,b.h);
+      ctx.fillStyle="rgba(181,199,205,.28)";
+      for(let wx=bx+45;wx<bx+b.w-35;wx+=92){
+        for(let wy=by+70;wy<by+b.h-80;wy+=105){
+          ctx.fillRect(wx,wy,38,52);
+        }
+      }
+      // ベランダ
+      ctx.fillStyle="rgba(27,33,39,.78)";
+      ctx.fillRect(bx+55,by+245,b.w*.48,13);
+      ctx.strokeStyle="rgba(165,178,183,.55)";
+      ctx.lineWidth=4;
+      for(let xx=bx+62;xx<bx+55+b.w*.48;xx+=26){
+        ctx.beginPath();ctx.moveTo(xx,by+208);ctx.lineTo(xx,by+245);ctx.stroke();
+      }
+      ctx.beginPath();ctx.moveTo(bx+55,by+208);ctx.lineTo(bx+55+b.w*.48,by+208);ctx.stroke();
+    }
+    ctx.restore();
   }
 
   function drawPlatform(p){
@@ -781,6 +866,58 @@
     for(let yy=y+36;yy<y+p.h;yy+=36){
       ctx.beginPath(); ctx.moveTo(x,yy); ctx.lineTo(x+p.w,yy); ctx.stroke();
     }
+  }
+
+  function drawThrower(e){
+    if(!e.alive) return;
+    const x=e.x-camera.x,y=e.y-camera.y;
+    ctx.save();
+    ctx.translate(x+e.w/2,y+e.h/2);
+    ctx.scale(e.facing,1);
+    if(e.flash>0) ctx.globalAlpha=.45;
+
+    // 横向きの猫科風の投擲敵
+    ctx.strokeStyle="#35313b"; ctx.lineWidth=10; ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(-10,23);ctx.lineTo(-14,38);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(10,23);ctx.lineTo(15,38);ctx.stroke();
+    ctx.fillStyle="#5c465f"; roundedRect(-21,-3,42,34,9);ctx.fill();
+
+    ctx.fillStyle="#9c7655";
+    ctx.beginPath();ctx.ellipse(1,-25,23,21,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.moveTo(-13,-39);ctx.lineTo(-5,-53);ctx.lineTo(1,-39);ctx.fill();
+    ctx.beginPath();ctx.moveTo(9,-39);ctx.lineTo(17,-51);ctx.lineTo(20,-35);ctx.fill();
+    ctx.beginPath();ctx.ellipse(19,-20,12,8,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#171719";ctx.beginPath();ctx.arc(11,-28,3,0,Math.PI*2);ctx.fill();
+
+    // 手元の予備ツボ
+    ctx.fillStyle="#a95f3e";
+    ctx.beginPath();
+    ctx.moveTo(20,-2);ctx.quadraticCurveTo(36,2,33,20);
+    ctx.quadraticCurveTo(30,30,18,27);ctx.quadraticCurveTo(8,25,10,13);
+    ctx.quadraticCurveTo(11,3,20,-2);ctx.fill();
+    ctx.fillStyle="#6f392a";ctx.fillRect(14,-4,14,5);
+
+    // HPは本体が見えてから頭上近く
+    ctx.setTransform(1,0,0,1,0,0);
+    if(x+e.w>0 && x<innerWidth && y+e.h>0 && y<innerHeight){
+      ctx.fillStyle="rgba(0,0,0,.35)";ctx.fillRect(x+7,y-7,e.w-14,5);
+      ctx.fillStyle="#f85";ctx.fillRect(x+7,y-7,(e.w-14)*Math.max(0,e.hp/3),5);
+    }
+    ctx.restore();
+  }
+
+  function drawPot(q){
+    const x=q.x-camera.x,y=q.y-camera.y;
+    ctx.save();
+    ctx.translate(x+q.w/2,y+q.h/2);
+    ctx.rotate(q.spin);
+    ctx.fillStyle="#b96a43";
+    ctx.beginPath();
+    ctx.moveTo(-8,-11);ctx.quadraticCurveTo(-15,-2,-11,9);
+    ctx.quadraticCurveTo(0,17,11,9);ctx.quadraticCurveTo(15,-2,8,-11);
+    ctx.closePath();ctx.fill();
+    ctx.fillStyle="#713b2b";ctx.fillRect(-8,-14,16,5);
+    ctx.restore();
   }
 
   function drawEnemy(e){
@@ -1290,6 +1427,8 @@
     ctx.save();
     for(const p of platforms) drawPlatform(p);
     for(const e of enemies) drawEnemy(e);
+    for(const e of throwers) drawThrower(e);
+    for(const q of pots) drawPot(q);
 
     // 攻撃残像
     for(const fx of attackFX){
