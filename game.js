@@ -4031,14 +4031,23 @@
       // 猫仙人：白装束＋長い白髭＋白眉。通常CAT LEEのシルエットは残す。
       ctx.save();
       ctx.globalAlpha=.96;
-      // 白い上衣を前面に重ねる
+      // 白装束を通常衣装より一回り大きく重ね、首元・肩・脇・裾まで完全に覆う。
       ctx.fillStyle="#f4f1e8";
-      ctx.beginPath();ctx.moveTo(-27,-19);ctx.lineTo(25,-19);ctx.lineTo(31,30);ctx.lineTo(16,42);ctx.lineTo(-25,39);ctx.lineTo(-32,9);ctx.closePath();ctx.fill();
-      ctx.strokeStyle="#d4d0c5";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-3,-18);ctx.lineTo(8,30);ctx.stroke();
-      // 白い袖
-      ctx.strokeStyle="#f4f1e8";ctx.lineWidth=13;ctx.lineCap="round";
-      ctx.beginPath();ctx.moveTo(-20,-10);ctx.lineTo(-34,10);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(20,-10);ctx.lineTo(34,8);ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-34,-25);ctx.quadraticCurveTo(-18,-34,0,-31);ctx.quadraticCurveTo(19,-34,35,-24);
+      ctx.lineTo(40,18);ctx.quadraticCurveTo(38,40,27,51);ctx.lineTo(-27,51);
+      ctx.quadraticCurveTo(-39,39,-41,16);ctx.closePath();ctx.fill();
+      // 高い白襟で元の黄襟・青い肩線も隠す
+      ctx.fillStyle="#fffdf5";
+      ctx.beginPath();ctx.moveTo(-15,-31);ctx.lineTo(-2,-38);ctx.lineTo(8,-31);ctx.lineTo(17,-19);ctx.lineTo(2,-14);ctx.lineTo(-13,-19);ctx.closePath();ctx.fill();
+      // 合わせ目
+      ctx.strokeStyle="#d4d0c5";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-8,-25);ctx.lineTo(8,40);ctx.stroke();
+      // 白い袖も肩から太めに覆う
+      ctx.strokeStyle="#f4f1e8";ctx.lineWidth=18;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(-27,-13);ctx.lineTo(-38,12);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(27,-13);ctx.lineTo(39,11);ctx.stroke();
+      // 白い腰帯で裾から元衣装が覗くのを防ぐ
+      ctx.strokeStyle="#fffaf0";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(-28,39);ctx.lineTo(28,39);ctx.stroke();
       // 白眉
       ctx.strokeStyle="#fffdf5";ctx.lineWidth=5;
       ctx.beginPath();ctx.moveTo(4,-43);ctx.lineTo(17,-46);ctx.stroke();
