@@ -569,7 +569,44 @@
     player.hp=player.maxHp;camera.x=0;camera.y=0;
   }
 
-  // 攻撃エフェクト兼ヒット判定。短時間だけ残る。
+  
+  function loadStage9(){
+    currentStage=9;stageCleared=false;clearTimer=0;
+    const ps=[
+      {x:0,y:1920,w:760,h:280},{x:760,y:1900,w:760,h:300},{x:1520,y:1940,w:760,h:260},
+      {x:2280,y:1900,w:760,h:300},{x:3040,y:1920,w:1160,h:280},
+      {x:330,y:1650,w:350,h:40},{x:920,y:1510,w:390,h:40},{x:1570,y:1640,w:360,h:40},
+      {x:2140,y:1470,w:390,h:40},{x:2730,y:1570,w:360,h:40},{x:3370,y:1430,w:400,h:40},
+      {x:710,y:1330,w:60,h:570},{x:1450,y:1260,w:60,h:680},{x:2640,y:1220,w:60,h:680},{x:3290,y:1170,w:60,h:750}
+    ];
+    platforms.splice(0,platforms.length,...ps);configurePlatforms();
+    backgroundWallJumpSurfaces.splice(0,backgroundWallJumpSurfaces.length,
+      {x:80,y:1150,h:750},{x:690,y:1150,h:750},{x:800,y:1030,h:870},{x:1430,y:1030,h:870},
+      {x:1510,y:1170,h:730},{x:2090,y:1170,h:730},{x:2120,y:980,h:920},{x:2620,y:980,h:920},
+      {x:2710,y:1080,h:820},{x:3270,y:1080,h:820},{x:3350,y:850,h:1050},{x:4160,y:850,h:1050});
+    enemies.splice(0,enemies.length,
+      {x:500,y:1806,w:72,h:96,hp:11,vx:0,flash:0,alive:true,type:"fox"},
+      {x:1100,y:1806,w:72,h:96,hp:11,vx:0,flash:0,alive:true,type:"dog"},
+      {x:1760,y:1846,w:72,h:96,hp:12,vx:0,flash:0,alive:true,type:"boar"},
+      {x:2460,y:1806,w:72,h:96,hp:12,vx:0,flash:0,alive:true,type:"rabbit"},
+      {x:3150,y:1826,w:72,h:96,hp:13,vx:0,flash:0,alive:true,type:"fox"});
+    for(const e of enemies)initEnemyState(e);
+    throwers.splice(0,throwers.length,
+      {x:1010,y:1418,w:68,h:92,hp:11,alive:true,facing:-1,throwTimer:.75,flash:0},
+      {x:2820,y:1478,w:68,h:92,hp:11,alive:true,facing:-1,throwTimer:1.1,flash:0});
+    pots.length=0;attackFX.length=0;
+    Object.assign(boss,{
+      x:3905,y:1798,baseY:1798,w:112,h:122,hp:112,maxHp:112,vx:0,vy:0,facing:-1,
+      flash:0,alive:true,active:false,attackTimer:0,attackCooldown:.62,attackHitDone:false,
+      walkPhase:0,hitPause:0,jumping:false,jumpCooldown:.9,weaponMode:"tonfa",weaponSerial:0
+    });
+    Object.assign(player,{x:180,y:1788,vx:0,vy:0,facing:1,grounded:false,onWall:0,wallLatched:false,
+      wallLatchSide:0,wallRef:null,wallJumpUsed:false,dashTimer:0,dashCooldown:0,attackTimer:0,
+      attackType:"",comboStep:0,comboWindow:0,invuln:1,respawnTimer:0,respawnX:180,respawnY:1788});
+    player.hp=player.maxHp;camera.x=0;camera.y=0;
+  }
+
+// 攻撃エフェクト兼ヒット判定。短時間だけ残る。
   const attackFX = [];
   function spawnAttackFX(fx){
     fx.hit = new Set();
@@ -1165,6 +1202,11 @@
         loadStage8();
         return;
       }
+      if(currentStage===8 && clearTimer>.65 && continuePressed){
+        input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
+        loadStage9();
+        return;
+      }
       input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
       return;
     }
@@ -1514,7 +1556,38 @@
       boss.facing=dx<0?-1:1;
       const dist=Math.abs(dx);
 
-      if(currentStage===8){
+      if(currentStage===9){
+        // 地下施設の副官：トンファー。高速接近→二連打、時々跳び込み。
+        if(boss.jumping){
+          boss.vy+=2000*dt;boss.x+=boss.vx*dt;boss.y+=boss.vy*dt;
+          if(!boss.attackHitDone && boss.vy>0 && overlap({x:boss.x+5,y:boss.y+15,w:boss.w-10,h:boss.h-10},player)){
+            boss.attackHitDone=true;
+            if(player.parryTimer>0){triggerParry(player.x+player.w/2,player.y+player.h*.45);player.parryTimer=0;boss.vx=-boss.facing*300;boss.vy=-340;}
+            else hurtPlayer(5,760*boss.facing,-430);
+          }
+          if(boss.y>=boss.baseY){boss.y=boss.baseY;boss.vy=0;boss.vx=0;boss.jumping=false;boss.jumpCooldown=.9;boss.attackCooldown=.28;}
+        }else if(boss.hitPause>0){
+          boss.vx*=Math.pow(.08,dt);boss.x+=boss.vx*dt;
+        }else if(boss.attackTimer>0){
+          const elapsed=.62-boss.attackTimer;boss.vx=0;
+          if(!boss.attackHitDone && elapsed>.20){
+            boss.attackHitDone=true;
+            const hb={x:boss.facing>0?boss.x+boss.w-20:boss.x-112,y:boss.y+18,w:132,h:76};
+            if(overlap(hb,player)){
+              if(player.parryTimer>0){triggerParry(player.x+player.w/2,player.y+player.h*.44);player.parryTimer=0;boss.attackTimer=0;boss.attackCooldown=.95;boss.vx=-boss.facing*330;}
+              else hurtPlayer(5,730*boss.facing,-300);
+            }
+          }
+        }else if(boss.jumpCooldown<=0 && dist>260 && dist<520){
+          boss.jumping=true;boss.vy=-720;boss.vx=boss.facing*(340+Math.min(80,dist*.1));boss.attackHitDone=false;boss.jumpCooldown=1.25;
+        }else if(dist<190 && boss.attackCooldown<=0){
+          boss.attackTimer=.62;boss.attackCooldown=.58+Math.random()*.2;boss.attackHitDone=false;boss.weaponSerial=(boss.weaponSerial||0)+1;
+        }else if(dist<850 && dist>150){
+          boss.vx=boss.facing*215;boss.x+=boss.vx*dt;
+        }else boss.vx=0;
+        boss.x=Math.max(3650,Math.min(4090-boss.w,boss.x));
+        if(!boss.jumping)boss.y=boss.baseY;
+      }else if(currentStage===8){
         // 現代街のボス：警棒の連撃＋跳び膝。銃はまだラスボスまで温存。
         if(boss.jumping){
           boss.vy+=1950*dt;boss.x+=boss.vx*dt;boss.y+=boss.vy*dt;
@@ -1818,6 +1891,64 @@
     ctx.arcTo(x,y+h,x,y,rr);
     ctx.arcTo(x,y,x+w,y,rr);
     ctx.closePath();
+  }
+
+  function drawStage9Background(){
+    const w=innerWidth,h=innerHeight;
+    const g=ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,"#10171d");g.addColorStop(.55,"#1e2c31");g.addColorStop(1,"#303739");
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);ctx.save();
+
+    // 地下鉄トンネルとコンクリート施設
+    ctx.fillStyle="#293237";
+    for(let x0=-200;x0<4400;x0+=620){
+      const x=x0-camera.x*.45;ctx.fillRect(x,480-camera.y*.05,500,1420);
+      ctx.strokeStyle="#455158";ctx.lineWidth=10;ctx.strokeRect(x+25,520-camera.y*.05,450,1320);
+    }
+
+    // 天井配管
+    const pipeY=780-camera.y*.08;
+    for(const off of [0,62,124]){
+      ctx.strokeStyle=off===62?"#705d43":"#58656a";ctx.lineWidth=16;
+      ctx.beginPath();ctx.moveTo(-100,pipeY+off);ctx.lineTo(w+100,pipeY+off);ctx.stroke();
+    }
+    for(let x=80;x<w;x+=230){
+      ctx.strokeStyle="#68757a";ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(x,pipeY-80);ctx.lineTo(x,pipeY+140);ctx.stroke();
+    }
+
+    // 地下鉄ホーム・線路
+    const railY=1865-camera.y;
+    ctx.fillStyle="#74736d";ctx.fillRect(-camera.x,railY,4300,35);
+    ctx.fillStyle="#171b1d";ctx.fillRect(-camera.x,railY+35,4300,90);
+    ctx.strokeStyle="#a7a39a";ctx.lineWidth=8;
+    ctx.beginPath();ctx.moveTo(-camera.x,railY+58);ctx.lineTo(4300-camera.x,railY+58);ctx.moveTo(-camera.x,railY+100);ctx.lineTo(4300-camera.x,railY+100);ctx.stroke();
+
+    // 警告帯・施設扉
+    for(let x0=180;x0<3500;x0+=700){
+      const x=x0-camera.x,y=1740-camera.y;
+      ctx.fillStyle="#c6a63d";ctx.fillRect(x,y,240,18);
+      ctx.fillStyle="#222";for(let i=0;i<6;i++){ctx.save();ctx.translate(x+i*42,y);ctx.rotate(-.55);ctx.fillRect(0,-8,16,36);ctx.restore();}
+    }
+    const labels=[[420,1250,"B2"],[1120,1130,"POWER"],[1800,1260,"MAINT."],[2460,1110,"SECURITY"],[3100,1230,"B3"]];
+    for(const [x0,y0,t] of labels){
+      const x=x0-camera.x,y=y0-camera.y;ctx.fillStyle="#20292d";ctx.fillRect(x,y,130,55);ctx.strokeStyle="#7f9297";ctx.lineWidth=3;ctx.strokeRect(x,y,130,55);
+      ctx.fillStyle="#cbd6d6";ctx.font="bold 18px sans-serif";ctx.textAlign="center";ctx.fillText(t,x+65,y+35);ctx.textAlign="left";
+    }
+
+    // 換気ファン
+    for(const x0 of [700,1960,3050]){
+      const x=x0-camera.x,y=1080-camera.y;ctx.strokeStyle="#718086";ctx.lineWidth=9;ctx.beginPath();ctx.arc(x,y,75,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle="#4d5b60";
+      for(let a=0;a<4;a++){ctx.save();ctx.translate(x,y);ctx.rotate(a*Math.PI/2);ctx.beginPath();ctx.ellipse(32,0,42,15,0,0,Math.PI*2);ctx.fill();ctx.restore();}
+    }
+
+    // 最奥：エレベーターホール。次は上へ。
+    const gx=3550-camera.x,gy=1110-camera.y;
+    ctx.fillStyle="#151d22";ctx.fillRect(gx,gy,540,790);
+    ctx.fillStyle="#59656b";ctx.fillRect(gx+105,gy+235,145,555);ctx.fillRect(gx+290,gy+235,145,555);
+    ctx.strokeStyle="#9ba7aa";ctx.lineWidth=5;ctx.strokeRect(gx+105,gy+235,145,555);ctx.strokeRect(gx+290,gy+235,145,555);
+    ctx.fillStyle="#d2bd68";ctx.font="bold 23px sans-serif";ctx.textAlign="center";ctx.fillText("TOWER ACCESS",gx+270,gy+175);ctx.textAlign="left";
+    ctx.restore();
   }
 
   function drawStage8Background(){
@@ -2409,6 +2540,7 @@
   }
 
   function drawBackground(){
+    if(currentStage===9){drawStage9Background();return;}
     if(currentStage===8){drawStage8Background();return;}
     if(currentStage===7){drawStage7Background();return;}
     if(currentStage===6){drawStage6Background();return;}
@@ -2556,6 +2688,16 @@
   function drawPlatform(p){
     const x=p.x-camera.x, y=p.y-camera.y;
 
+    if(currentStage===9){
+      if(p.climbThrough){
+        const cx=x+p.w/2;ctx.save();ctx.strokeStyle="#657279";ctx.lineWidth=9;
+        ctx.beginPath();ctx.moveTo(cx-14,y);ctx.lineTo(cx-14,y+p.h);ctx.moveTo(cx+14,y);ctx.lineTo(cx+14,y+p.h);ctx.stroke();
+        ctx.lineWidth=4;for(let yy=y+24;yy<y+p.h;yy+=32){ctx.beginPath();ctx.moveTo(cx-14,yy);ctx.lineTo(cx+14,yy);ctx.stroke();}
+        ctx.restore();return;
+      }
+      if(p.oneWay){ctx.fillStyle="#414b50";ctx.fillRect(x,y,p.w,p.h);ctx.fillStyle="#a38d48";ctx.fillRect(x,y,p.w,8);return;}
+      ctx.fillStyle="#3a4144";roundedRect(x,y,p.w,p.h,4);ctx.fill();ctx.fillStyle="#697277";ctx.fillRect(x,y,p.w,12);return;
+    }
     if(currentStage===8){
       if(p.climbThrough){
         // 非常階段の縦梯子／排水管
@@ -2852,7 +2994,29 @@
     ctx.scale(e.facing,1);
     if(e.flash>0) ctx.globalAlpha=.48;
 
-    if(currentStage===8){
+    if(currentStage===9){
+      // 狼の副官。防具付きの黒装束＋両手トンファー。
+      ctx.strokeStyle="#1d2328";ctx.lineWidth=18;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(-23,35);ctx.lineTo(-30,59);ctx.stroke();ctx.beginPath();ctx.moveTo(23,35);ctx.lineTo(30,59);ctx.stroke();
+      ctx.fillStyle="#20272d";roundedRect(-40,-5,80,60,10);ctx.fill();
+      ctx.fillStyle="#59646b";ctx.fillRect(-35,8,70,12);ctx.fillRect(-31,30,62,9);
+      ctx.fillStyle="#6b7378";ctx.fillRect(-32,-2,18,22);ctx.fillRect(14,-2,18,22);
+      ctx.fillStyle="#45484b";ctx.beginPath();ctx.ellipse(2,-41,36,31,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.moveTo(-25,-59);ctx.lineTo(-17,-79);ctx.lineTo(-5,-61);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(18,-60);ctx.lineTo(27,-78);ctx.lineTo(34,-57);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#b7a08e";ctx.beginPath();ctx.ellipse(27,-31,18,12,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#d8d16b";ctx.beginPath();ctx.arc(14,-46,4,0,Math.PI*2);ctx.fill();
+
+      const t=e.attackTimer>0?Math.max(0,Math.min(1,(.62-e.attackTimer)/.62)):0;
+      const sw=e.attackTimer>0?Math.sin(t*Math.PI):0;
+      for(const side of [-1,1]){
+        ctx.save();ctx.scale(side,1);ctx.strokeStyle="#343a3e";ctx.lineWidth=14;
+        ctx.beginPath();ctx.moveTo(20,4);ctx.lineTo(38+sw*12,15-sw*18);ctx.stroke();
+        ctx.translate(39+sw*12,15-sw*18);ctx.rotate(-.25-sw*.7);
+        ctx.strokeStyle="#858d91";ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(-14,0);ctx.lineTo(62,0);ctx.stroke();
+        ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(5,-18);ctx.lineTo(5,20);ctx.stroke();ctx.restore();
+      }
+    }else if(currentStage===8){
       // 黒豹の現代用心棒。スーツ＋伸縮警棒。
       ctx.strokeStyle="#20232b";ctx.lineWidth=18;ctx.lineCap="round";
       ctx.beginPath();ctx.moveTo(-22,35);ctx.lineTo(-28,59);ctx.stroke();ctx.beginPath();ctx.moveTo(22,35);ctx.lineTo(29,59);ctx.stroke();
@@ -3636,7 +3800,8 @@
         (currentStage===4?"第四幕　工場街":
         (currentStage===5?"第五幕　海外街":
         (currentStage===6?"第六幕　港湾倉庫":
-        (currentStage===7?"第七幕　山岳寺院":"第八幕　現代繁華街"))))));
+        (currentStage===7?"第七幕　山岳寺院":
+        (currentStage===8?"第八幕　現代繁華街":"第九幕　地下施設")))))));
       ctx.fillText(stageName,innerWidth/2,88);
       ctx.font="14px sans-serif";
       ctx.fillText("STAGE "+currentStage,innerWidth/2,110);
@@ -3758,6 +3923,10 @@
       }else if(currentStage===7){
         ctx.fillStyle="#fff";ctx.font="bold 26px serif";ctx.fillText("第七幕　山岳寺院　突破",innerWidth/2,innerHeight*.43);
         ctx.font="19px sans-serif";ctx.fillText("山を下り、現代へ―― 第八幕「現代繁華街」",innerWidth/2,innerHeight*.53);
+        if(clearTimer>.65){ctx.font="bold 17px sans-serif";ctx.fillText("攻撃・爪・ダッシュ・ジャンプで次へ",innerWidth/2,innerHeight*.64);}
+      }else if(currentStage===8){
+        ctx.fillStyle="#fff";ctx.font="bold 26px serif";ctx.fillText("第八幕　現代繁華街　突破",innerWidth/2,innerHeight*.43);
+        ctx.font="19px sans-serif";ctx.fillText("敵組織を追って地下へ―― 第九幕「地下施設」",innerWidth/2,innerHeight*.53);
         if(clearTimer>.65){ctx.font="bold 17px sans-serif";ctx.fillText("攻撃・爪・ダッシュ・ジャンプで次へ",innerWidth/2,innerHeight*.64);}
       }else{
         const [rank,ending]=resultText();
