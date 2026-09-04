@@ -1597,8 +1597,14 @@
       const box={x:wv.x-wv.r,y:wv.y-wv.r*.65,w:wv.r*2,h:wv.r*1.3};
       for(const e of [...enemies,...throwers,boss]){
         if(!e.alive||wv.hit.has(e)||!overlap(box,e))continue;
-        wv.hit.add(e);e.hp-=wv.damage;e.flash=.18;e.vx=wv.facing*1150;e.vy=-720;
-        e.hitPause=Math.max(e.hitPause||0,.48);spawnHitSpark(e.x+e.w/2,e.y+e.h*.42,"hit");
+        wv.hit.add(e);e.hp-=wv.damage;e.flash=.18;
+        if(e===boss){
+          // 無双火力はそのまま。ただしボスを地形外へ吹き飛ばして進行不能にしない。
+          e.vx=0;e.vy=0;e.hitPause=Math.max(e.hitPause||0,.42);
+        }else{
+          e.vx=wv.facing*1150;e.vy=-720;e.hitPause=Math.max(e.hitPause||0,.48);
+        }
+        spawnHitSpark(e.x+e.w/2,e.y+e.h*.42,"hit");
         if(e.hp<=0)e.alive=false;
       }
       for(let qi=pots.length-1;qi>=0;qi--)if(overlap(box,pots[qi]))pots.splice(qi,1);
@@ -2004,6 +2010,16 @@
       if(currentStage===10) player.x=Math.max(300,Math.min(3800-player.w,player.x));
       else player.x=Math.max(3560,Math.min(4140-player.w,player.x));
     }
+    if(boss.active && boss.alive){
+      if(currentStage===10){
+        boss.x=Math.max(350,Math.min(3750-boss.w,boss.x));
+        if(!Number.isFinite(boss.y) || boss.y<250 || boss.y>700){boss.y=boss.baseY;boss.vy=0;}
+      }else{
+        boss.x=Math.max(3650,Math.min(4090-boss.w,boss.x));
+        if(!Number.isFinite(boss.y) || boss.y<boss.baseY-900 || boss.y>boss.baseY+260){boss.y=boss.baseY;boss.vy=0;boss.jumping=false;}
+      }
+    }
+
     if(!boss.alive && boss.active && !stageCleared){
       if(currentStage===10){sageUnlocked=true;try{localStorage.setItem("catLeeSageUnlocked","1");}catch{}}
       stageCleared=true;
@@ -4009,6 +4025,31 @@
         ctx.lineTo(46,yy+4);
         ctx.stroke();
       }
+      ctx.restore();
+    }
+    if(sageMode){
+      // 猫仙人：白装束＋長い白髭＋白眉。通常CAT LEEのシルエットは残す。
+      ctx.save();
+      ctx.globalAlpha=.96;
+      // 白い上衣を前面に重ねる
+      ctx.fillStyle="#f4f1e8";
+      ctx.beginPath();ctx.moveTo(-27,-19);ctx.lineTo(25,-19);ctx.lineTo(31,30);ctx.lineTo(16,42);ctx.lineTo(-25,39);ctx.lineTo(-32,9);ctx.closePath();ctx.fill();
+      ctx.strokeStyle="#d4d0c5";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-3,-18);ctx.lineTo(8,30);ctx.stroke();
+      // 白い袖
+      ctx.strokeStyle="#f4f1e8";ctx.lineWidth=13;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(-20,-10);ctx.lineTo(-34,10);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(20,-10);ctx.lineTo(34,8);ctx.stroke();
+      // 白眉
+      ctx.strokeStyle="#fffdf5";ctx.lineWidth=5;
+      ctx.beginPath();ctx.moveTo(4,-43);ctx.lineTo(17,-46);ctx.stroke();
+      // 頬から胸まで流れる長い白髭
+      ctx.fillStyle="#fffdf5";
+      ctx.beginPath();ctx.moveTo(18,-31);ctx.quadraticCurveTo(31,-18,24,-2);ctx.quadraticCurveTo(19,17,7,31);
+      ctx.quadraticCurveTo(11,8,4,-8);ctx.quadraticCurveTo(8,-22,18,-31);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(10,-29);ctx.quadraticCurveTo(6,-10,-4,21);ctx.quadraticCurveTo(2,-5,0,-28);ctx.closePath();ctx.fill();
+      // 白い後ろ毛
+      ctx.strokeStyle="#eeeae0";ctx.lineWidth=7;
+      ctx.beginPath();ctx.moveTo(-19,-42);ctx.quadraticCurveTo(-36,-32,-38,-12);ctx.stroke();
       ctx.restore();
     }
     ctx.restore();
