@@ -1150,20 +1150,43 @@
   }
 
   function drawPlatform(p){
-    const x=p.x-camera.x, y=p.y-camera.y;
-    if(p.climbThrough){
-      // 当たり判定を持たない「登れる電柱」。見た目も細くして素通り可能だと分かりやすく。
+    const x=p.x-camera.x, y=p.y-camera.y;    if(p.climbThrough){
+      // STAGE 1では電柱ではなく、登れる太い竹竿として描画
       const cx=x+p.w/2;
-      ctx.strokeStyle="#4a4e50";
-      ctx.lineWidth=18;
+      ctx.save();
+      ctx.strokeStyle="#617b45";
+      ctx.lineWidth=Math.max(12,Math.min(20,p.w*.34));
       ctx.lineCap="round";
-      ctx.beginPath(); ctx.moveTo(cx,y+8); ctx.lineTo(cx,y+p.h); ctx.stroke();
-      ctx.strokeStyle="#7d8589"; ctx.lineWidth=5;
-      ctx.beginPath(); ctx.moveTo(cx-2,y+10); ctx.lineTo(cx-2,y+p.h); ctx.stroke();
-      ctx.strokeStyle="#41474a"; ctx.lineWidth=8;
-      ctx.beginPath(); ctx.moveTo(cx-34,y+38); ctx.lineTo(cx+34,y+38); ctx.stroke();
-      ctx.fillStyle="#697277";
-      ctx.beginPath(); ctx.arc(cx-23,y+38,7,0,Math.PI*2); ctx.arc(cx+23,y+38,7,0,Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx,y+4);
+      ctx.lineTo(cx,y+p.h-2);
+      ctx.stroke();
+
+      // 竹の節
+      ctx.strokeStyle="#91a866";
+      ctx.lineWidth=3;
+      for(let yy=y+34;yy<y+p.h;yy+=58){
+        ctx.beginPath();
+        ctx.moveTo(cx-10,yy);
+        ctx.lineTo(cx+10,yy);
+        ctx.stroke();
+      }
+
+      // 小枝と葉を少しだけ付け、電柱シルエットを消す
+      ctx.strokeStyle="#617b45";
+      ctx.lineWidth=4;
+      for(let yy=y+70,n=0;yy<y+p.h-50;yy+=118,n++){
+        const side=n%2===0?1:-1;
+        ctx.beginPath();
+        ctx.moveTo(cx,yy);
+        ctx.lineTo(cx+side*25,yy-22);
+        ctx.stroke();
+        ctx.fillStyle="#789653";
+        ctx.beginPath();
+        ctx.ellipse(cx+side*31,yy-27,13,5,side*.35,0,Math.PI*2);
+        ctx.fill();
+      }
+      ctx.restore();
       return;
     }
     ctx.fillStyle="#354751";
