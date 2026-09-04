@@ -82,7 +82,11 @@
     deaths:0,
     respawnTimer:0,
     respawnX:220,
-    respawnY:1760
+    respawnY:1760,
+    parryTimer:0,
+    parryCooldown:0,
+    parrySuccess:0,
+    backstepTimer:0
   };
 
   // 敵AI用の状態。player生成後に初期化する。
@@ -284,6 +288,16 @@
     }
   }
 
+  function triggerParry(x,y){
+    player.parrySuccess=.20;
+    player.hitStop=Math.max(player.hitStop,.055);
+    player.invuln=Math.max(player.invuln,.18);
+    spawnAttackFX({
+      type:"parrySpark",x:x,y:y,
+      life:.22,maxLife:.22
+    });
+  }
+
   function defeatPlayer(){
     if(player.respawnTimer>0 || stageCleared) return;
     player.deaths++;
@@ -461,6 +475,11 @@
     }
   }
   function doClaw(){
+    // 爪は攻撃だけでなく防御にも使える。受付はやや広めの約0.24秒。
+    if(player.parryCooldown<=0){
+      player.parryTimer=.24;
+      player.parryCooldown=.30;
+    }
     if(player.dashTimer>0 && player.attackTimer<=0){
       startAttack("dashclaw",.30);
       player.dashTimer=0;
@@ -525,6 +544,33 @@
     }
   }
   function doDash(){
+    // 敵と反対方向＋ダッシュで無敵バックステップ。
+    // 近くに敵がいない時は「向いている方向の後ろ入力」で判定。
+    let nearest=null, nearestDist=99999;
+    for(const e of [...enemies,...throwers,boss]){
+      if(!e.alive) continue;
+      const d=Math.abs((e.x+e.w/2)-(player.x+player.w/2));
+      if(d<nearestDist){ nearest=e; nearestDist=d; }
+    }
+    let away=-player.facing;
+    if(nearest && nearestDist<520){
+      away=(player.x+player.w/2)<(nearest.x+nearest.w/2)?-1:1;
+    }
+    const backHeld=Math.abs(input.x)>.35 && Math.sign(input.x)===away;
+    if(backHeld && player.grounded && player.dashCooldown<=0){
+      player.wallLatched=false;
+      player.backstepTimer=.28;
+      player.invuln=Math.max(player.invuln,.24);
+      player.vx=away*690;
+      player.vy=-120;
+      player.dashCooldown=.36;
+      spawnAttackFX({
+        type:"backstepAir",
+        x:player.x+player.w/2,y:player.y+player.h*.70,
+        facing:away,life:.24,maxLife:.24
+      });
+      return;
+    }
     if(player.dashCooldown>0) return;
     if(!player.grounded && !player.airDashAvailable) return;
     player.dashTimer=.26;
@@ -589,6 +635,10 @@
     }
 
     player.animTime += dt;
+    player.parryTimer=Math.max(0,player.parryTimer-dt);
+    player.parryCooldown=Math.max(0,player.parryCooldown-dt);
+    player.parrySuccess=Math.max(0,player.parrySuccess-dt);
+    player.backstepTimer=Math.max(0,player.backstepTimer-dt);
     player.attackTimer=Math.max(0,player.attackTimer-dt);
     player.comboWindow=Math.max(0,player.comboWindow-dt);
     player.dashTimer=Math.max(0,player.dashTimer-dt);
@@ -784,9 +834,31 @@
       q.spin+=dt*7*(q.vx<0?-1:1);
 
       let broken=false;
-      if(player.invuln<=0 && overlap(q,player)){
-        hurtPlayer(2,300*(q.vx<0?-1:1),-260);
-        broken=true;
+      if(overlap(q,player)){
+        if(player.parryTimer>0){
+          triggerParry(q.x+q.w/2,q.y+q.h/2);
+          player.parryTimer=0;
+          // ツボを敵側へ打ち返す
+          q.vx=-q.vx*1.25;
+          q.vy=-430;
+          q.returned=true;
+          q.ownerSafe=.12;
+        }else if(player.invuln<=0){
+          hurtPlayer(2,300*(q.vx<0?-1:1),-260);
+          broken=true;
+        }
+      }
+      if(q.ownerSafe>0) q.ownerSafe=Math.max(0,q.ownerSafe-dt);
+      if(q.returned && q.ownerSafe<=0){
+        for(const e of [...enemies,...throwers,boss]){
+          if(!e.alive || !overlap(q,e)) continue;
+          e.hp-=3;
+          e.flash=.12;
+          e.vx=(q.vx<0?-1:1)*260;
+          if(e.hp<=0) e.alive=false;
+          broken=true;
+          break;
+        }
       }
       if(!broken){
         for(const plat of platforms){
@@ -816,8 +888,16 @@
         if(!e.attackHitDone && elapsed>.27){
           e.attackHitDone=true;
           const hb={x:e.facing>0?e.x+e.w-4:e.x-54,y:e.y-12,w:58,h:e.h+20};
-          if(player.invuln<=0 && overlap(hb,player)){
-            hurtPlayer(2,420*e.facing,-260);
+          if(overlap(hb,player)){
+            if(player.parryTimer>0){
+              triggerParry(player.x+player.w/2,player.y+player.h*.42);
+              player.parryTimer=0;
+              e.vx=-e.facing*340;
+              e.attackTimer=0;
+              e.attackCooldown=1.05;
+            }else if(player.invuln<=0){
+              hurtPlayer(2,420*e.facing,-260);
+            }
           }
         }
       }else if(dist<92 && e.attackCooldown<=0){
@@ -842,6 +922,14 @@
 
     // 終端エリアに入るとボス戦。倒すまで arena から先へは抜けない。
     if(boss.alive && player.x>3550) boss.active=true;
+    if(player.parrySuccess>0){
+      ctx.fillStyle="#fff";
+      ctx.font="bold 20px sans-serif";
+      ctx.textAlign="center";
+      ctx.fillText("カキン！",innerWidth/2,126);
+      ctx.textAlign="left";
+    }
+
     if(boss.active && boss.alive){
       boss.flash=Math.max(0,boss.flash-dt);
       boss.attackTimer=Math.max(0,boss.attackTimer-dt);
@@ -861,7 +949,17 @@
             x:boss.facing>0?boss.x+boss.w-8:boss.x-86,
             y:boss.y+20,w:94,h:74
           };
-          if(overlap(hb,player)) hurtPlayer(3,620*boss.facing,-340);
+          if(overlap(hb,player)){
+            if(player.parryTimer>0){
+              triggerParry(player.x+player.w/2,player.y+player.h*.40);
+              player.parryTimer=0;
+              boss.attackTimer=0;
+              boss.attackCooldown=1.15;
+              boss.vx=-boss.facing*260;
+            }else{
+              hurtPlayer(3,620*boss.facing,-340);
+            }
+          }
         }
       }else if(dist<130 && boss.attackCooldown<=0){
         boss.attackTimer=.72;
@@ -1776,6 +1874,39 @@
         ctx.moveTo(-8,0);
         ctx.quadraticCurveTo(18,-14,58+progress*20,0);
         ctx.stroke();
+        ctx.restore();
+      }else if(fx.type==="parrySpark"){
+        const progress=1-fx.life/fx.maxLife;
+        ctx.save();
+        ctx.translate(fx.x-camera.x,fx.y-camera.y);
+        ctx.globalAlpha=alpha;
+        ctx.strokeStyle="#fff";
+        ctx.lineCap="round";
+        for(let i=0;i<8;i++){
+          const a=i*Math.PI/4 + progress*.25;
+          const r1=9, r2=28+progress*18;
+          ctx.lineWidth=i%2?3:5;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a)*r1,Math.sin(a)*r1);
+          ctx.lineTo(Math.cos(a)*r2,Math.sin(a)*r2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }else if(fx.type==="backstepAir"){
+        const progress=1-fx.life/fx.maxLife;
+        ctx.save();
+        ctx.translate(fx.x-camera.x,fx.y-camera.y);
+        ctx.scale(fx.facing,1);
+        ctx.globalAlpha=.55*alpha;
+        ctx.strokeStyle="#fff";
+        ctx.lineCap="round";
+        for(let i=0;i<4;i++){
+          ctx.lineWidth=5-i*.6;
+          ctx.beginPath();
+          ctx.moveTo(10,(i-1.5)*9);
+          ctx.quadraticCurveTo(-20-progress*20,(i-1.5)*11,-62-progress*28,(i-1.5)*13);
+          ctx.stroke();
+        }
         ctx.restore();
       }else if(fx.type==="dashClawTrail"){
         ctx.save();
