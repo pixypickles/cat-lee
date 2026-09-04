@@ -86,7 +86,8 @@
     parryTimer:0,
     parryCooldown:0,
     parrySuccess:0,
-    backstepTimer:0
+    backstepTimer:0,
+    attackSerial:0
   };
 
   // 敵AI用の状態。player生成後に初期化する。
@@ -289,9 +290,11 @@
   }
 
   function triggerParry(x,y){
-    player.parrySuccess=.20;
-    player.hitStop=Math.max(player.hitStop,.055);
-    player.invuln=Math.max(player.invuln,.18);
+    player.parrySuccess=.24;
+    player.hitStop=Math.max(player.hitStop,.065);
+    player.invuln=Math.max(player.invuln,.22);
+    player.attackTimer=0;
+    player.attackType="";
     spawnAttackFX({
       type:"parrySpark",x:x,y:y,
       life:.22,maxLife:.22
@@ -336,6 +339,7 @@
     player.attackType = type;
     player.attackTimer = duration;
     player.comboWindow = .58;
+    player.attackSerial++;
   }
 
   function attackHitbox(){
@@ -368,14 +372,25 @@
     if(!hb) return;
     for(const e of [...enemies,...throwers,boss]){
       if(!e.alive || !overlap(hb,e)) continue;
-      let mark = hitMemory.get(e);
-      if(mark === player.attackType + ":" + Math.floor(player.attackTimer*100)) continue;
+
+      // 爪ガード中は、攻撃動作中の相手に通常爪ダメージを先に入れない。
+      // 「弾いたのに同時に倒す／食らう」を防ぎ、弾きを優先する。
+      const parryTarget =
+        player.attackType==="clawstrike" &&
+        player.parryTimer>0 &&
+        ((e===boss && e.active && e.attackTimer>0) ||
+         (enemies.includes(e) && e.attackTimer>0));
+      if(parryTarget) continue;
+
+      if(hitMemory.get(e)===player.attackSerial) continue;
+      hitMemory.set(e,player.attackSerial);
+
       e.hp -= hb.damage;
       e.vx = hb.kx;
-      e.y += Math.sign(hb.ky)*3;
+      // 通常敵だけ軽く上下にのけぞる。固定配置敵とボスは浮かせない。
+      if(enemies.includes(e)) e.y += Math.sign(hb.ky)*3;
       e.flash = .12;
       player.hitStop = .045;
-      hitMemory.set(e, player.attackType + ":" + Math.floor(player.attackTimer*100));
       if(e.hp<=0) e.alive=false;
     }
   }
@@ -475,9 +490,9 @@
     }
   }
   function doClaw(){
-    // 爪は攻撃だけでなく防御にも使える。受付はやや広めの約0.24秒。
+    // 爪は攻撃だけでなく防御にも使える。受付は広めの約0.30秒。
     if(player.parryCooldown<=0){
-      player.parryTimer=.24;
+      player.parryTimer=.30;
       player.parryCooldown=.30;
     }
     if(player.dashTimer>0 && player.attackTimer<=0){
@@ -922,14 +937,6 @@
 
     // 終端エリアに入るとボス戦。倒すまで arena から先へは抜けない。
     if(boss.alive && player.x>3550) boss.active=true;
-    if(player.parrySuccess>0){
-      ctx.fillStyle="#fff";
-      ctx.font="bold 20px sans-serif";
-      ctx.textAlign="center";
-      ctx.fillText("カキン！",innerWidth/2,126);
-      ctx.textAlign="left";
-    }
-
     if(boss.active && boss.alive){
       boss.flash=Math.max(0,boss.flash-dt);
       boss.attackTimer=Math.max(0,boss.attackTimer-dt);
@@ -956,6 +963,7 @@
               boss.attackTimer=0;
               boss.attackCooldown=1.15;
               boss.vx=-boss.facing*260;
+              boss.y=1774;
             }else{
               hurtPlayer(3,620*boss.facing,-340);
             }
@@ -1725,6 +1733,14 @@
     ctx.font="bold 19px sans-serif";
     ctx.textAlign="center";
     ctx.fillText("❌ "+player.deaths,innerWidth-59,39);
+
+    if(player.parrySuccess>0){
+      ctx.fillStyle="#fff";
+      ctx.font="bold 20px sans-serif";
+      ctx.textAlign="center";
+      ctx.fillText("カキン！",innerWidth/2,126);
+      ctx.textAlign="left";
+    }
 
     if(boss.active && boss.alive){
       const bw=Math.min(430,innerWidth*.62);
