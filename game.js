@@ -32,6 +32,37 @@
     {x:3330,y:1390,w:260,h:42}
   ];
 
+  // 背景の建物は通常の地形判定を持たないが、
+  // 空中ジャンプ時だけ壁蹴りの足場として使える。
+  // 低い屋根へテンポよく上がるための補助で、1回の滞空につき1回まで。
+  const backgroundWallJumpSurfaces = [
+    {x:180,  y:1390,h:500},{x:610,  y:1390,h:500},
+    {x:650,  y:1320,h:570},{x:1150, y:1320,h:570},
+    {x:1190, y:1260,h:630},{x:1620, y:1260,h:630},
+    {x:1690, y:1380,h:510},{x:2150, y:1380,h:510},
+    {x:2200, y:1310,h:580},{x:2720, y:1310,h:580},
+    {x:2770, y:1240,h:650},{x:3240, y:1240,h:650},
+    {x:3290, y:1350,h:540},{x:3700, y:1350,h:540},
+    {x:3740, y:1280,h:610},{x:4170, y:1280,h:610}
+  ];
+
+  function backgroundWallProbe(){
+    const pcx=player.x+player.w/2;
+    const top=player.y+10;
+    const bottom=player.y+player.h-8;
+    let best=null, bestDist=999;
+    for(const w of backgroundWallJumpSurfaces){
+      if(bottom<=w.y || top>=w.y+w.h) continue;
+      const d=Math.abs(pcx-w.x);
+      if(d<=player.w/2+24 && d<bestDist){
+        bestDist=d;
+        // wall is on the right => side 1, on left => side -1
+        best={side:w.x>=pcx?1:-1,x:w.x};
+      }
+    }
+    return best;
+  }
+
   // 薄い足場：下から通過でき、上からは着地できる
   for(const p of platforms){
     p.oneWay = p.h <= 55 && p.w >= 180;
@@ -63,6 +94,7 @@
     wallLatched:false,
     wallLatchSide:0,
     wallRef:null,
+    wallJumpUsed:false,
     dashTimer:0,
     dashCooldown:0,
     attackTimer:0,
@@ -630,6 +662,7 @@
   }
 
   function doJump(){
+    // 爪でしっかり掴まっている時の壁ジャンプは従来通り強め。
     if(player.wallLatched){
       const away = -player.wallLatchSide;
       player.wallLatched=false;
@@ -637,16 +670,35 @@
       player.vx=650*away;
       player.vy=-940;
       player.facing=away;
+      player.wallJumpUsed=true;
+      spawnAttackFX({
+        type:"wallKickAir",dir:"up",
+        x:player.x+player.w/2,y:player.y+player.h*.62,
+        facing:away,life:.16,maxLife:.16
+      });
       return;
     }
+
+    // 空中では、登れる壁・竹・背景建物の壁の近くなら
+    // 1回だけ「壁を蹴って2段ジャンプ」できる。
     wallProbe();
-    if(player.onWall && !player.grounded){
-      const away=-player.onWall;
-      player.vx=630*away;
-      player.vy=-920;
+    const bgWall=backgroundWallProbe();
+    if(!player.grounded && !player.wallJumpUsed && (player.onWall || bgWall)){
+      const side=player.onWall || bgWall.side;
+      const away=-side;
+      player.vx=540*away;
+      player.vy=-860;
       player.facing=away;
+      player.wallJumpUsed=true;
+      player.onWall=0;
+      spawnAttackFX({
+        type:"wallKickAir",dir:"up",
+        x:player.x+player.w/2,y:player.y+player.h*.66,
+        facing:away,life:.17,maxLife:.17
+      });
       return;
     }
+
     if(player.grounded){
       if(player.dashTimer>0){
         // ダッシュジャンプ：勢いを残して通常より高く遠くへ
@@ -658,6 +710,7 @@
       }
       player.grounded=false;
       player.airKickCount=0;
+      player.wallJumpUsed=false;
     }
   }
 
@@ -795,6 +848,7 @@
       player.respawnX=player.x;
       player.respawnY=player.y;
       player.airKickCount=0;
+      player.wallJumpUsed=false;
       player.wallLatched=false;
       player.wallRef=null;
       player.wallLatchSide=0;
