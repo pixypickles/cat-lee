@@ -1154,11 +1154,14 @@
   function doDash(){
     if(sageMode){
       const dir=Math.abs(input.x)>.25?Math.sign(input.x):player.facing;player.facing=dir;
-      const target=dir>0?camera.x+innerWidth-120:camera.x+48;
-      player.x=Math.max(20,Math.min(WORLD.width-player.w-20,target));
-      player.vx=dir*120;player.invuln=.55;player.dashCooldown=.12;
-      spawnAttackFX({type:"dashClawTrail",x:player.x+player.w/2,y:player.y+player.h/2,facing:dir,
-        life:.22,maxLife:.22,damage:18,kx:900*dir,ky:-250,length:210,height:player.h*.9});
+      // 仙人ダッシュ：1回で約1.7画面ぶんをほぼ瞬間移動。
+      const leap=Math.max(innerWidth*1.7,1120);
+      const oldX=player.x;
+      player.x=Math.max(20,Math.min(WORLD.width-player.w-20,player.x+dir*leap));
+      player.vx=dir*180;player.invuln=.72;player.dashCooldown=.07;
+      spawnAttackFX({type:"dashClawTrail",x:(oldX+player.x)/2+player.w/2,y:player.y+player.h/2,facing:dir,
+        life:.24,maxLife:.24,damage:20,kx:1050*dir,ky:-300,
+        length:Math.max(260,Math.abs(player.x-oldX)),height:player.h});
       return;
     }
     // 敵と反対方向＋ダッシュで無敵バックステップ。
@@ -1205,8 +1208,8 @@
       const away = -player.wallLatchSide;
       player.wallLatched=false;
       player.wallRef=null;
-      player.vx=650*away;
-      player.vy=-940;
+      player.vx=(sageMode?820:650)*away;
+      player.vy=sageMode?-1580:-940;
       player.facing=away;
       player.wallJumpUsed=true;
       spawnAttackFX({
@@ -1224,8 +1227,8 @@
     if(!player.grounded && !player.wallJumpUsed && (player.onWall || bgWall)){
       const side=player.onWall || bgWall.side;
       const away=-side;
-      player.vx=540*away;
-      player.vy=-860;
+      player.vx=(sageMode?760:540)*away;
+      player.vy=sageMode?-1500:-860;
       player.facing=away;
       player.wallJumpUsed=true;
       player.onWall=0;
@@ -1240,11 +1243,11 @@
     if(player.grounded){
       if(player.dashTimer>0){
         // ダッシュジャンプ：勢いを残して通常より高く遠くへ
-        player.vy=-1180;
-        player.vx=Math.max(Math.abs(player.vx),820)*player.facing;
+        player.vy=sageMode?-1750:-1180;
+        player.vx=Math.max(Math.abs(player.vx),sageMode?1150:820)*player.facing;
         player.dashTimer=0;
       }else{
-        player.vy=-980;
+        player.vy=sageMode?-1600:-980;
       }
       player.grounded=false;
       player.airKickCount=0;
@@ -1407,8 +1410,9 @@
         }
       }
       if(Math.abs(input.x)>.15) player.facing=Math.sign(input.x);
-      player.vy += WORLD.gravity*dt;
-      player.vy = Math.min(player.vy,1200);
+      const gravityScale=(sageMode && !player.grounded && input.y<-.25)?.52:1;
+      player.vy += WORLD.gravity*gravityScale*dt;
+      player.vy = Math.min(player.vy,sageMode?1050:1200);
     }
 
     if(!player.wallLatched){
