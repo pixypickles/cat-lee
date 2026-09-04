@@ -400,9 +400,9 @@
       hitMemory.set(e,player.attackSerial);
 
       e.hp -= hb.damage;
-      // ヒット時は大きく押し戻さず、その場で一瞬だけ足を止める。
-      e.vx = 0;
-      e.hitPause = Math.max(e.hitPause||0,.11);
+      // ヒット時は少しだけ押し戻し、その後すぐ詰め直されないよう短く足を止める。
+      e.vx = 150*player.facing;
+      e.hitPause = Math.max(e.hitPause||0,.14);
       e.flash = .12;
       spawnHitSpark(
         e.x+e.w*(player.facing>0?.22:.78),
@@ -812,8 +812,8 @@
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
-          e.vx=0;
-          e.hitPause=Math.max(e.hitPause||0,.11);
+          e.vx=190*fx.facing;
+          e.hitPause=Math.max(e.hitPause||0,.14);
           e.flash=.12;
           spawnHitSpark(e.x+e.w/2,e.y+e.h*.43,"hit");
           player.hitStop=.045;
@@ -827,8 +827,8 @@
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
-          e.vx=0;
-          e.hitPause=Math.max(e.hitPause||0,.11);
+          e.vx=230*fx.facing;
+          e.hitPause=Math.max(e.hitPause||0,.14);
           e.flash=.12;
           spawnHitSpark(e.x+e.w/2,e.y+e.h*.46,"hit");
           player.hitStop=.04;
@@ -845,8 +845,8 @@
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
-          e.vx=0;
-          e.hitPause=Math.max(e.hitPause||0,.12);
+          e.vx=210*fx.facing;
+          e.hitPause=Math.max(e.hitPause||0,.15);
           e.flash=.12;
           spawnHitSpark(e.x+e.w/2,e.y+e.h*.48,"hit");
           player.hitStop=.05;
@@ -905,8 +905,8 @@
           if(!e.alive || !overlap(q,e)) continue;
           e.hp-=3;
           e.flash=.12;
-          e.vx=0;
-          e.hitPause=Math.max(e.hitPause||0,.13);
+          e.vx=(q.vx<0?-1:1)*190;
+          e.hitPause=Math.max(e.hitPause||0,.15);
           spawnHitSpark(e.x+e.w/2,e.y+e.h*.42,"hit");
           if(e.hp<=0) e.alive=false;
           broken=true;
@@ -937,7 +937,8 @@
       const dist=Math.abs(dx);
 
       if(e.hitPause>0){
-        e.vx=0;
+        // 被弾直後はAIの前進を止め、受けた小さなノックバックだけ残す。
+        e.vx*=Math.pow(.08,dt);
       }else if(e.attackTimer>0){
         e.vx=0;
         const elapsed=.62-e.attackTimer;
@@ -990,7 +991,7 @@
       const dist=Math.abs(dx);
 
       if(boss.hitPause>0){
-        boss.vx=0;
+        boss.vx*=Math.pow(.08,dt);
       }else if(boss.attackTimer>0){
         const elapsed=.72-boss.attackTimer;
         boss.vx=0;
