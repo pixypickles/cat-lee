@@ -402,6 +402,62 @@
     camera.x=0;camera.y=0;
   }
 
+  
+  function loadStage5(){
+    currentStage=5;
+    stageCleared=false;
+    clearTimer=0;
+
+    const stage5Platforms=[
+      {x:0,y:1920,w:880,h:280},{x:880,y:1900,w:760,h:300},
+      {x:1640,y:1940,w:800,h:260},{x:2440,y:1890,w:780,h:310},{x:3220,y:1930,w:980,h:270},
+      {x:390,y:1660,w:330,h:42},{x:970,y:1570,w:390,h:42},{x:1690,y:1640,w:360,h:42},
+      {x:2270,y:1510,w:390,h:42},{x:2890,y:1600,w:350,h:42},{x:3470,y:1470,w:370,h:42},
+      {x:810,y:1410,w:60,h:490},{x:1520,y:1370,w:60,h:570},{x:2730,y:1350,w:60,h:540},{x:3370,y:1300,w:60,h:630},
+      {x:2090,y:1330,w:280,h:40},{x:2990,y:1250,w:260,h:40},{x:3570,y:1300,w:260,h:40}
+    ];
+    platforms.splice(0,platforms.length,...stage5Platforms);
+    configurePlatforms();
+
+    backgroundWallJumpSurfaces.splice(0,backgroundWallJumpSurfaces.length,
+      {x:150,y:1300,h:590},{x:730,y:1300,h:590},{x:920,y:1170,h:720},{x:1460,y:1170,h:720},
+      {x:1660,y:1300,h:590},{x:2160,y:1300,h:590},{x:2200,y:1110,h:780},{x:2700,y:1110,h:780},
+      {x:2820,y:1230,h:660},{x:3320,y:1230,h:660},{x:3420,y:1030,h:860},{x:4160,y:1030,h:860}
+    );
+
+    enemies.splice(0,enemies.length,
+      {x:590,y:1806,w:72,h:96,hp:7,vx:0,flash:0,alive:true,type:"fox"},
+      {x:1200,y:1786,w:72,h:96,hp:7,vx:0,flash:0,alive:true,type:"dog"},
+      {x:1880,y:1846,w:72,h:96,hp:8,vx:0,flash:0,alive:true,type:"boar"},
+      {x:2590,y:1796,w:72,h:96,hp:8,vx:0,flash:0,alive:true,type:"rabbit"},
+      {x:3290,y:1836,w:72,h:96,hp:9,vx:0,flash:0,alive:true,type:"fox"}
+    );
+    for(const e of enemies) initEnemyState(e);
+
+    throwers.splice(0,throwers.length,
+      {x:1090,y:1478,w:68,h:92,hp:7,alive:true,facing:-1,throwTimer:.9,flash:0},
+      {x:3020,y:1508,w:68,h:92,hp:7,alive:true,facing:-1,throwTimer:1.45,flash:0}
+    );
+    pots.length=0;
+    attackFX.length=0;
+
+    Object.assign(boss,{
+      x:3915,y:1808,baseY:1808,w:106,h:122,
+      hp:72,maxHp:72,vx:0,vy:0,facing:-1,flash:0,alive:true,active:false,
+      attackTimer:0,attackCooldown:.72,attackHitDone:false,walkPhase:0,hitPause:0,
+      jumping:false,jumpCooldown:0,weaponMode:"thrust",weaponSerial:0
+    });
+
+    Object.assign(player,{
+      x:180,y:1788,vx:0,vy:0,facing:1,grounded:false,onWall:0,wallLatched:false,
+      wallLatchSide:0,wallRef:null,wallJumpUsed:false,dashTimer:0,dashCooldown:0,
+      attackTimer:0,attackType:"",comboStep:0,comboWindow:0,invuln:1.0,
+      respawnTimer:0,respawnX:180,respawnY:1788
+    });
+    player.hp=player.maxHp;
+    camera.x=0;camera.y=0;
+  }
+
   // 攻撃エフェクト兼ヒット判定。短時間だけ残る。
   const attackFX = [];
   function spawnAttackFX(fx){
@@ -978,6 +1034,11 @@
         loadStage4();
         return;
       }
+      if(currentStage===4 && clearTimer>.65 && continuePressed){
+        input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
+        loadStage5();
+        return;
+      }
       input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
       return;
     }
@@ -1327,7 +1388,47 @@
       boss.facing=dx<0?-1:1;
       const dist=Math.abs(dx);
 
-      if(currentStage===4){
+      if(currentStage===5){
+        // 長棍ボス：突きと横薙ぎ。どちらも爪で弾ける。
+        if(boss.hitPause>0){
+          boss.vx*=Math.pow(.08,dt);
+          boss.x+=boss.vx*dt;
+        }else if(boss.attackTimer>0){
+          const elapsed=.72-boss.attackTimer;
+          boss.vx=0;
+          if(!boss.attackHitDone && elapsed>.27){
+            boss.attackHitDone=true;
+            const hb=boss.weaponMode==="sweep"
+              ? {x:boss.facing>0?boss.x+boss.w-18:boss.x-142,y:boss.y+20,w:160,h:78}
+              : {x:boss.facing>0?boss.x+boss.w-12:boss.x-164,y:boss.y+34,w:176,h:44};
+            if(overlap(hb,player)){
+              if(player.parryTimer>0){
+                triggerParry(player.x+player.w/2,player.y+player.h*.45);
+                player.parryTimer=0;
+                boss.attackTimer=0;
+                boss.attackCooldown=1.05;
+                boss.vx=-boss.facing*300;
+              }else{
+                hurtPlayer(boss.weaponMode==="sweep"?4:3,720*boss.facing,boss.weaponMode==="sweep"?-430:-240);
+              }
+            }
+          }
+        }else if(dist<205 && boss.attackCooldown<=0){
+          boss.weaponSerial=(boss.weaponSerial||0)+1;
+          boss.weaponMode=(boss.weaponSerial%2===0)?"sweep":"thrust";
+          boss.attackTimer=.72;
+          boss.attackCooldown=.78+Math.random()*.30;
+          boss.attackHitDone=false;
+        }else if(dist<780 && dist>165){
+          boss.vx=boss.facing*165;
+          boss.x+=boss.vx*dt;
+        }else{
+          boss.vx=0;
+        }
+        boss.x=Math.max(3650,Math.min(4090-boss.w,boss.x));
+        boss.y=boss.baseY;
+
+      }else if(currentStage===4){
         // 第四幕ボスはジャンプで間合いを変える。
         if(boss.jumping){
           boss.vy += 1950*dt;
@@ -1495,6 +1596,82 @@
     ctx.arcTo(x,y+h,x,y,rr);
     ctx.arcTo(x,y,x+w,y,rr);
     ctx.closePath();
+  }
+
+  function drawStage5Background(){
+    const w=innerWidth,h=innerHeight;
+    const g=ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,"#11192a");g.addColorStop(.58,"#26384d");g.addColorStop(1,"#54434a");
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    ctx.save();
+
+    for(let i=0;i<18;i++){
+      const bw=110+(i%4)*38,bh=260+(i%6)*74;
+      const bx=i*280-camera.x*.12-140,by=1580-bh-camera.y*.04;
+      ctx.fillStyle=i%2?"#1c2632":"#202b39";ctx.fillRect(bx,by,bw,bh);
+      for(let wy=by+32;wy<by+bh-30;wy+=48){
+        ctx.fillStyle="rgba(242,205,105,.18)";ctx.fillRect(bx+20,wy,13,18);ctx.fillRect(bx+57,wy,13,18);
+      }
+    }
+
+    const buildings=[
+      {x:150,y:1300,w:580,h:590},{x:920,y:1170,w:540,h:720},{x:1660,y:1300,w:500,h:590},
+      {x:2200,y:1110,w:500,h:780},{x:2820,y:1230,w:500,h:660},{x:3420,y:1030,w:740,h:860}
+    ];
+    for(const b of buildings){
+      const bx=b.x-camera.x,by=b.y-camera.y;
+      ctx.fillStyle="#654842";ctx.fillRect(bx,by,b.w,b.h);
+      ctx.strokeStyle="rgba(41,25,27,.30)";ctx.lineWidth=2;
+      for(let yy=by+24,row=0;yy<by+b.h;yy+=26,row++){
+        ctx.beginPath();ctx.moveTo(bx,yy);ctx.lineTo(bx+b.w,yy);ctx.stroke();
+        const off=row%2?26:0;
+        for(let xx=bx+off;xx<bx+b.w;xx+=52){ctx.beginPath();ctx.moveTo(xx,yy-26);ctx.lineTo(xx,yy);ctx.stroke();}
+      }
+      for(let wx=bx+65;wx<bx+b.w-70;wx+=128){
+        for(let wy=by+90;wy<Math.min(by+470,by+b.h-90);wy+=138){
+          ctx.fillStyle="#29485b";ctx.fillRect(wx,wy,62,82);
+          ctx.strokeStyle="#2d2527";ctx.lineWidth=6;ctx.strokeRect(wx,wy,62,82);
+          ctx.fillStyle="rgba(235,191,94,.32)";ctx.fillRect(wx+8,wy+8,18,25);
+        }
+      }
+    }
+
+    const neons=[[420,1450,"DRAGON"],[1190,1350,"HOTEL"],[1850,1490,"CAFE"],[2470,1320,"CLUB"],[3090,1430,"MARKET"],[3750,1280,"GOLDEN"]];
+    ctx.textAlign="center";ctx.font="bold 20px sans-serif";
+    for(const [nx0,ny0,label] of neons){
+      const nx=nx0-camera.x,ny=ny0-camera.y;
+      ctx.fillStyle="rgba(18,23,31,.85)";ctx.fillRect(nx-52,ny-28,104,46);
+      ctx.strokeStyle="#e3b84c";ctx.lineWidth=3;ctx.strokeRect(nx-52,ny-28,104,46);
+      ctx.fillStyle="#f1d06c";ctx.fillText(label,nx,ny+2);
+    }
+    ctx.textAlign="left";
+
+    for(const [sx0,sy0] of [[730,1450],[1480,1370],[2700,1320],[3340,1410]]){
+      const sx=sx0-camera.x,sy=sy0-camera.y;
+      ctx.strokeStyle="#343a42";ctx.lineWidth=7;
+      ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+105,sy);ctx.moveTo(sx+14,sy);ctx.lineTo(sx+14,sy+310);ctx.moveTo(sx+91,sy);ctx.lineTo(sx+91,sy+310);ctx.stroke();
+      ctx.lineWidth=3;
+      for(let yy=sy+32;yy<sy+300;yy+=34){ctx.beginPath();ctx.moveTo(sx+14,yy);ctx.lineTo(sx+91,yy);ctx.stroke();}
+    }
+
+    const railY=1540-camera.y*.18;
+    ctx.fillStyle="#303942";ctx.fillRect(0,railY,w,30);
+    ctx.fillStyle="#222930";
+    for(let x=-80;x<w+100;x+=180)ctx.fillRect(x,railY+30,26,h-railY);
+    const trainX=500-(camera.x*.35%1800);
+    ctx.fillStyle="rgba(83,96,108,.82)";roundedRect(trainX,railY-82,610,76,10);ctx.fill();
+    for(let i=0;i<7;i++){ctx.fillStyle="#6f8b98";ctx.fillRect(trainX+34+i*78,railY-64,54,34);}
+
+    const tx=3180-camera.x*.65,ty=770-camera.y*.07;
+    ctx.fillStyle="#303941";ctx.beginPath();ctx.ellipse(tx,ty,75,28,0,0,Math.PI*2);ctx.fill();ctx.fillRect(tx-75,ty,150,110);
+    ctx.strokeStyle="#303941";ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(tx-55,ty+100);ctx.lineTo(tx-95,ty+240);ctx.moveTo(tx+55,ty+100);ctx.lineTo(tx+95,ty+240);ctx.stroke();
+
+    const gx=3590-camera.x,gy=1370-camera.y;
+    ctx.fillStyle="#251f28";ctx.fillRect(gx,gy,460,520);
+    ctx.strokeStyle="#b48947";ctx.lineWidth=8;ctx.strokeRect(gx+18,gy+18,424,484);
+    ctx.fillStyle="#8d2634";ctx.fillRect(gx+100,gy+55,260,65);
+    ctx.fillStyle="#f1d275";ctx.font="bold 27px serif";ctx.textAlign="center";ctx.fillText("龍門武館",gx+230,gy+97);ctx.textAlign="left";
+    ctx.restore();
   }
 
   function drawStage4Background(){
@@ -1863,6 +2040,10 @@
   }
 
   function drawBackground(){
+    if(currentStage===5){
+      drawStage5Background();
+      return;
+    }
     if(currentStage===4){
       drawStage4Background();
       return;
@@ -2002,6 +2183,23 @@
 
   function drawPlatform(p){
     const x=p.x-camera.x, y=p.y-camera.y;
+
+    if(currentStage===5){
+      if(p.climbThrough){
+        const cx=x+p.w/2;ctx.save();ctx.strokeStyle="#343b44";ctx.lineWidth=16;ctx.lineCap="round";
+        ctx.beginPath();ctx.moveTo(cx,y+3);ctx.lineTo(cx,y+p.h);ctx.stroke();
+        ctx.strokeStyle="#7b8388";ctx.lineWidth=3;
+        for(let yy=y+38;yy<y+p.h;yy+=48){ctx.beginPath();ctx.moveTo(cx-12,yy);ctx.lineTo(cx+12,yy);ctx.stroke();}
+        ctx.restore();return;
+      }
+      if(p.oneWay){
+        ctx.fillStyle="#363d46";ctx.fillRect(x,y,p.w,p.h);ctx.fillStyle="#8c755f";ctx.fillRect(x,y,p.w,8);
+        ctx.strokeStyle="#20262c";ctx.lineWidth=3;
+        for(let xx=x+30;xx<x+p.w;xx+=42){ctx.beginPath();ctx.moveTo(xx,y+8);ctx.lineTo(xx,y+p.h);ctx.stroke();}
+        return;
+      }
+      ctx.fillStyle="#3d4147";roundedRect(x,y,p.w,p.h,4);ctx.fill();ctx.fillStyle="#6e6762";ctx.fillRect(x,y,p.w,12);return;
+    }
 
     if(currentStage===4){
       if(p.climbThrough){
@@ -2165,7 +2363,10 @@
     ctx.fillStyle="#171719";ctx.beginPath();ctx.arc(11,-28,3,0,Math.PI*2);ctx.fill();
 
     // 手元の投擲物
-    if(currentStage===4){
+    if(currentStage===5){
+      ctx.fillStyle="#8a969e";roundedRect(17,-2,13,27,4);ctx.fill();
+      ctx.fillStyle="#4d575e";ctx.fillRect(17,2,13,4);ctx.fillRect(17,18,13,4);
+    }else if(currentStage===4){
       ctx.fillStyle="#8b9296";ctx.fillRect(18,-2,9,29);
       ctx.fillStyle="#555d62";
       ctx.beginPath();ctx.arc(22,-5,8,0,Math.PI*2);ctx.fill();
@@ -2196,7 +2397,11 @@
     ctx.save();
     ctx.translate(x+q.w/2,y+q.h/2);
     ctx.rotate(q.spin);
-    if(currentStage===4){
+    if(currentStage===5){
+      ctx.fillStyle="#88939b";roundedRect(-8,-13,16,26,4);ctx.fill();
+      ctx.fillStyle="#4f5960";ctx.fillRect(-8,-10,16,4);ctx.fillRect(-8,7,16,4);
+      ctx.strokeStyle="rgba(230,235,238,.55)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-3,-7);ctx.lineTo(-3,6);ctx.stroke();
+    }else if(currentStage===4){
       // 工場街では金属ボルトを投げる。
       ctx.fillStyle="#899095";
       ctx.fillRect(-5,-13,10,26);
@@ -2242,7 +2447,39 @@
     ctx.scale(e.facing,1);
     if(e.flash>0) ctx.globalAlpha=.48;
 
-    if(currentStage===4){
+    if(currentStage===5){
+      // 鷹の棍術家
+      ctx.strokeStyle="#272a2f";ctx.lineWidth=17;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(-22,35);ctx.lineTo(-27,58);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(22,35);ctx.lineTo(29,58);ctx.stroke();
+
+      ctx.fillStyle="#252833";roundedRect(-37,-4,74,56,11);ctx.fill();
+      ctx.strokeStyle="#b7893f";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(4,-1);ctx.lineTo(5,44);ctx.stroke();
+      ctx.fillStyle="#7f2831";ctx.fillRect(-35,22,70,8);
+
+      ctx.fillStyle="#9b7955";ctx.beginPath();ctx.ellipse(1,-40,35,31,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.moveTo(-21,-58);ctx.lineTo(-8,-78);ctx.lineTo(0,-58);ctx.fill();
+      ctx.fillStyle="#d0aa5d";ctx.beginPath();ctx.moveTo(31,-43);ctx.lineTo(51,-34);ctx.lineTo(31,-26);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#111";ctx.beginPath();ctx.arc(15,-45,4,0,Math.PI*2);ctx.fill();
+
+      ctx.strokeStyle="#9b7955";ctx.lineWidth=14;
+      ctx.beginPath();ctx.moveTo(26,4);ctx.lineTo(42,10);ctx.lineTo(50,18);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-20,4);ctx.lineTo(4,12);ctx.lineTo(18,17);ctx.stroke();
+
+      ctx.save();ctx.translate(22,14);
+      let staffAngle=-.12,staffShift=0;
+      if(e.attackTimer>0){
+        const swing=Math.sin(Math.min(1,ap/.72)*Math.PI*.5);
+        if(e.weaponMode==="sweep"){staffAngle=-.95+1.45*swing;staffShift=10*swing;}
+        else{staffAngle=-.08;staffShift=58*swing;}
+      }
+      ctx.rotate(staffAngle);
+      ctx.strokeStyle="#7b4d2b";ctx.lineWidth=9;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(-58+staffShift,0);ctx.lineTo(92+staffShift,0);ctx.stroke();
+      ctx.strokeStyle="#d5b45f";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(80+staffShift,0);ctx.lineTo(96+staffShift,0);ctx.stroke();
+      ctx.restore();
+
+    }else if(currentStage===4){
       // 第四幕ボス：大型ゴリラの工場監督。ジャンプ攻撃を使う重量級。
       const airborne=e.jumping;
       const tuck=airborne?10:0;
@@ -2412,7 +2649,7 @@
     ctx.beginPath(); ctx.moveTo(-16,7); ctx.lineTo(-25,19); ctx.stroke();
 
     // 人型胴体。港街では用心棒らしい暗い赤茶の上着。
-    const outfit=currentStage===4?"#3e4d45":(currentStage===3?"#2f3948":(currentStage===2?"#563842":"#303947"));
+    const outfit=currentStage===5?"#2f2938":(currentStage===4?"#3e4d45":(currentStage===3?"#2f3948":(currentStage===2?"#563842":"#303947")));
     ctx.fillStyle=outfit;
     roundedRect(-24,1,48,37,10); ctx.fill();
 
@@ -2920,7 +3157,8 @@
       ctx.font="bold 24px serif";
       const stageName=currentStage===1?"第一幕　古街":
         (currentStage===2?"第二幕　港街":
-        (currentStage===3?"第三幕　新市街":"第四幕　工場街"));
+        (currentStage===3?"第三幕　新市街":
+        (currentStage===4?"第四幕　工場街":"第五幕　海外街")));
       ctx.fillText(stageName,innerWidth/2,88);
       ctx.font="14px sans-serif";
       ctx.fillText("STAGE "+currentStage,innerWidth/2,110);
@@ -3016,6 +3254,16 @@
         ctx.fillText("第三幕　新市街　突破",innerWidth/2,innerHeight*.43);
         ctx.font="19px sans-serif";
         ctx.fillText("夜の工業地帯へ―― 第四幕「工場街」",innerWidth/2,innerHeight*.53);
+        if(clearTimer>.65){
+          ctx.font="bold 17px sans-serif";
+          ctx.fillText("攻撃・爪・ダッシュ・ジャンプで次へ",innerWidth/2,innerHeight*.64);
+        }
+      }else if(currentStage===4){
+        ctx.fillStyle="#fff";
+        ctx.font="bold 26px serif";
+        ctx.fillText("第四幕　工場街　突破",innerWidth/2,innerHeight*.43);
+        ctx.font="19px sans-serif";
+        ctx.fillText("海の向こうの大都市へ―― 第五幕「海外街」",innerWidth/2,innerHeight*.53);
         if(clearTimer>.65){
           ctx.font="bold 17px sans-serif";
           ctx.fillText("攻撃・爪・ダッシュ・ジャンプで次へ",innerWidth/2,innerHeight*.64);
@@ -3240,9 +3488,9 @@
 
     // ボス arena の終端
     const gx=4140-camera.x, gy=1500-camera.y;
-    ctx.fillStyle=currentStage===1?"#5b2a25":(currentStage===2?"#4b4037":(currentStage===3?"#343b44":"#2d3439"));
+    ctx.fillStyle=currentStage===1?"#5b2a25":(currentStage===2?"#4b4037":(currentStage===3?"#343b44":(currentStage===4?"#2d3439":"#251f28")));
     ctx.fillRect(gx,gy,22,390);
-    ctx.fillStyle=currentStage===1?"#d8ad48":(currentStage===2?"#a88b63":(currentStage===3?"#b6a274":"#c29a42"));
+    ctx.fillStyle=currentStage===1?"#d8ad48":(currentStage===2?"#a88b63":(currentStage===3?"#b6a274":(currentStage===4?"#c29a42":"#b7893f")));
     ctx.fillRect(gx-14,gy,50,18);
 
     ctx.restore();
