@@ -289,6 +289,14 @@
     }
   }
 
+  function spawnHitSpark(x,y,kind="hit"){
+    spawnAttackFX({
+      type:"hitSpark",
+      x,y,kind,
+      life:.16,maxLife:.16
+    });
+  }
+
   function triggerParry(x,y){
     player.parrySuccess=.24;
     player.hitStop=Math.max(player.hitStop,.065);
@@ -297,7 +305,7 @@
     player.attackType="";
     spawnAttackFX({
       type:"parrySpark",x:x,y:y,
-      life:.22,maxLife:.22
+      life:.26,maxLife:.26
     });
   }
 
@@ -320,6 +328,11 @@
     player.vx=kx;
     player.vy=ky;
     player.invuln=.72;
+    spawnHitSpark(
+      player.x+player.w/2,
+      player.y+player.h*.46,
+      "hurt"
+    );
     if(player.hp<=0) defeatPlayer();
   }
 
@@ -387,10 +400,15 @@
       hitMemory.set(e,player.attackSerial);
 
       e.hp -= hb.damage;
-      e.vx = hb.kx;
-      // 通常敵だけ軽く上下にのけぞる。固定配置敵とボスは浮かせない。
-      if(enemies.includes(e)) e.y += Math.sign(hb.ky)*3;
+      // ヒット時は大きく押し戻さず、その場で一瞬だけ足を止める。
+      e.vx = 0;
+      e.hitPause = Math.max(e.hitPause||0,.11);
       e.flash = .12;
+      spawnHitSpark(
+        e.x+e.w*(player.facing>0?.22:.78),
+        e.y+e.h*.46,
+        "hit"
+      );
       player.hitStop = .045;
       if(e.hp<=0) e.alive=false;
     }
@@ -794,9 +812,10 @@
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
-          e.vx=fx.kx;
-          e.y-=8;
+          e.vx=0;
+          e.hitPause=Math.max(e.hitPause||0,.11);
           e.flash=.12;
+          spawnHitSpark(e.x+e.w/2,e.y+e.h*.43,"hit");
           player.hitStop=.045;
           if(e.hp<=0) e.alive=false;
         }
@@ -808,8 +827,10 @@
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
-          e.vx=fx.kx;
+          e.vx=0;
+          e.hitPause=Math.max(e.hitPause||0,.11);
           e.flash=.12;
+          spawnHitSpark(e.x+e.w/2,e.y+e.h*.46,"hit");
           player.hitStop=.04;
           if(e.hp<=0) e.alive=false;
         }
@@ -824,9 +845,10 @@
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
-          e.vx=fx.kx;
-          e.y+=8;
+          e.vx=0;
+          e.hitPause=Math.max(e.hitPause||0,.12);
           e.flash=.12;
+          spawnHitSpark(e.x+e.w/2,e.y+e.h*.48,"hit");
           player.hitStop=.05;
           if(e.hp<=0) e.alive=false;
         }
@@ -883,7 +905,9 @@
           if(!e.alive || !overlap(q,e)) continue;
           e.hp-=3;
           e.flash=.12;
-          e.vx=(q.vx<0?-1:1)*260;
+          e.vx=0;
+          e.hitPause=Math.max(e.hitPause||0,.13);
+          spawnHitSpark(e.x+e.w/2,e.y+e.h*.42,"hit");
           if(e.hp<=0) e.alive=false;
           broken=true;
           break;
@@ -903,6 +927,7 @@
     for(const e of enemies){
       if(!e.alive) continue;
       e.flash=Math.max(0,e.flash-dt);
+      e.hitPause=Math.max(0,(e.hitPause||0)-dt);
       e.attackTimer=Math.max(0,e.attackTimer-dt);
       e.attackCooldown=Math.max(0,e.attackCooldown-dt);
       e.walkPhase += dt*8;
@@ -911,7 +936,9 @@
       e.facing=dx<0?-1:1;
       const dist=Math.abs(dx);
 
-      if(e.attackTimer>0){
+      if(e.hitPause>0){
+        e.vx=0;
+      }else if(e.attackTimer>0){
         e.vx=0;
         const elapsed=.62-e.attackTimer;
         if(!e.attackHitDone && elapsed>.27){
@@ -953,6 +980,7 @@
     if(boss.alive && player.x>3550) boss.active=true;
     if(boss.active && boss.alive){
       boss.flash=Math.max(0,boss.flash-dt);
+      boss.hitPause=Math.max(0,(boss.hitPause||0)-dt);
       boss.attackTimer=Math.max(0,boss.attackTimer-dt);
       boss.attackCooldown=Math.max(0,boss.attackCooldown-dt);
       boss.walkPhase+=dt*8;
@@ -961,7 +989,9 @@
       boss.facing=dx<0?-1:1;
       const dist=Math.abs(dx);
 
-      if(boss.attackTimer>0){
+      if(boss.hitPause>0){
+        boss.vx=0;
+      }else if(boss.attackTimer>0){
         const elapsed=.72-boss.attackTimer;
         boss.vx=0;
         if(!boss.attackHitDone && elapsed>.30){
@@ -2020,6 +2050,28 @@
         ctx.quadraticCurveTo(18,-14,58+progress*20,0);
         ctx.stroke();
         ctx.restore();
+      }else if(fx.type==="hitSpark"){
+        const progress=1-fx.life/fx.maxLife;
+        ctx.save();
+        ctx.translate(fx.x-camera.x,fx.y-camera.y);
+        ctx.globalAlpha=alpha;
+        ctx.strokeStyle="#fff";
+        ctx.fillStyle="#fff";
+        ctx.lineCap="round";
+        const r=6+progress*13;
+        for(let i=0;i<5;i++){
+          const a=-.9+i*.45;
+          ctx.lineWidth=2.5;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a)*3,Math.sin(a)*3);
+          ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+          ctx.stroke();
+        }
+        ctx.globalAlpha=.55*alpha;
+        ctx.beginPath();
+        ctx.arc(0,0,4+progress*3,0,Math.PI*2);
+        ctx.fill();
+        ctx.restore();
       }else if(fx.type==="parrySpark"){
         const progress=1-fx.life/fx.maxLife;
         ctx.save();
@@ -2027,15 +2079,29 @@
         ctx.globalAlpha=alpha;
         ctx.strokeStyle="#fff";
         ctx.lineCap="round";
+
+        // 接触点のリング。上の「カキン！」とは別に、その場で弾いたことが分かる。
+        ctx.lineWidth=5;
+        ctx.beginPath();
+        ctx.arc(0,0,10+progress*24,0,Math.PI*2);
+        ctx.stroke();
+
         for(let i=0;i<8;i++){
           const a=i*Math.PI/4 + progress*.25;
-          const r1=9, r2=28+progress*18;
+          const r1=8, r2=30+progress*20;
           ctx.lineWidth=i%2?3:5;
           ctx.beginPath();
           ctx.moveTo(Math.cos(a)*r1,Math.sin(a)*r1);
           ctx.lineTo(Math.cos(a)*r2,Math.sin(a)*r2);
           ctx.stroke();
         }
+
+        ctx.globalAlpha=.85*alpha;
+        ctx.lineWidth=4;
+        ctx.beginPath();
+        ctx.moveTo(-15,-15);ctx.lineTo(15,15);
+        ctx.moveTo(15,-15);ctx.lineTo(-15,15);
+        ctx.stroke();
         ctx.restore();
       }else if(fx.type==="backstepAir"){
         const progress=1-fx.life/fx.maxLife;
