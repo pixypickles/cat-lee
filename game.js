@@ -606,6 +606,58 @@
     player.hp=player.maxHp;camera.x=0;camera.y=0;
   }
 
+
+  function loadStage10(){
+    currentStage=10;stageCleared=false;clearTimer=0;
+    const ps=[
+      // ロビー→右上→左上→右上→左上→屋上。各階は折り返し通路。
+      {x:0,y:1920,w:4200,h:280},
+      {x:300,y:1640,w:3500,h:40},
+      {x:300,y:1360,w:3500,h:40},
+      {x:300,y:1080,w:3500,h:40},
+      {x:300,y:800,w:3500,h:40},
+      {x:300,y:520,w:3500,h:40},
+      // 各端の非常階段／エレベーターシャフト。交互に上へ。
+      {x:3720,y:1360,w:60,h:560},{x:300,y:1080,w:60,h:560},
+      {x:3720,y:800,w:60,h:560},{x:300,y:520,w:60,h:560},
+      // 爪登りショートカット用の中央シャフト
+      {x:2020,y:520,w:60,h:1400}
+    ];
+    platforms.splice(0,platforms.length,...ps);configurePlatforms();
+    backgroundWallJumpSurfaces.splice(0,backgroundWallJumpSurfaces.length,
+      {x:80,y:500,h:1420},{x:298,y:500,h:1420},{x:3780,y:500,h:1420},{x:4160,y:500,h:1420},
+      {x:2010,y:500,h:1420},{x:2080,y:500,h:1420});
+
+    enemies.splice(0,enemies.length,
+      {x:900,y:1544,w:72,h:96,hp:13,vx:0,flash:0,alive:true,type:"dog"},
+      {x:2750,y:1544,w:72,h:96,hp:13,vx:0,flash:0,alive:true,type:"boar"},
+      {x:2950,y:1264,w:72,h:96,hp:14,vx:0,flash:0,alive:true,type:"fox"},
+      {x:1050,y:1264,w:72,h:96,hp:14,vx:0,flash:0,alive:true,type:"rabbit"},
+      {x:1100,y:984,w:72,h:96,hp:15,vx:0,flash:0,alive:true,type:"dog"},
+      {x:2820,y:984,w:72,h:96,hp:15,vx:0,flash:0,alive:true,type:"boar"},
+      {x:2900,y:704,w:72,h:96,hp:16,vx:0,flash:0,alive:true,type:"fox"},
+      {x:1050,y:704,w:72,h:96,hp:16,vx:0,flash:0,alive:true,type:"rabbit"});
+    for(const e of enemies)initEnemyState(e);
+    throwers.splice(0,throwers.length,
+      {x:2450,y:1548,w:68,h:92,hp:12,alive:true,facing:-1,throwTimer:.8,flash:0},
+      {x:1450,y:1268,w:68,h:92,hp:12,alive:true,facing:1,throwTimer:1.1,flash:0},
+      {x:2450,y:988,w:68,h:92,hp:13,alive:true,facing:-1,throwTimer:.9,flash:0},
+      {x:1450,y:708,w:68,h:92,hp:13,alive:true,facing:1,throwTimer:1.2,flash:0});
+    pots.length=0;attackFX.length=0;
+
+    // 屋上ラスボス。銃弾は pots 配列を流用し bullet=true で直進させる。
+    Object.assign(boss,{
+      x:3300,y:398,baseY:398,w:112,h:122,hp:130,maxHp:130,vx:0,vy:0,facing:-1,
+      flash:0,alive:true,active:false,attackTimer:0,attackCooldown:.72,attackHitDone:false,
+      walkPhase:0,hitPause:0,jumping:false,jumpCooldown:0,weaponMode:"pistol",weaponSerial:0,
+      gunCooldown:.8
+    });
+    Object.assign(player,{x:180,y:1788,vx:0,vy:0,facing:1,grounded:false,onWall:0,wallLatched:false,
+      wallLatchSide:0,wallRef:null,wallJumpUsed:false,dashTimer:0,dashCooldown:0,attackTimer:0,
+      attackType:"",comboStep:0,comboWindow:0,invuln:1,respawnTimer:0,respawnX:180,respawnY:1788});
+    player.hp=player.maxHp;camera.x=0;camera.y=0;
+  }
+
 // 攻撃エフェクト兼ヒット判定。短時間だけ残る。
   const attackFX = [];
   function spawnAttackFX(fx){
@@ -1207,6 +1259,11 @@
         loadStage9();
         return;
       }
+      if(currentStage===9 && clearTimer>.65 && continuePressed){
+        input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
+        loadStage10();
+        return;
+      }
       input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
       return;
     }
@@ -1444,23 +1501,24 @@
     // 投擲物：重力で落下し、地形か主人公に当たると壊れる
     for(let i=pots.length-1;i>=0;i--){
       const q=pots[i];
-      q.vy+=1050*dt;
-      q.x+=q.vx*dt;
-      q.y+=q.vy*dt;
-      q.spin+=dt*7*(q.vx<0?-1:1);
+      if(q.bullet){
+        q.x+=q.vx*dt;q.y+=q.vy*dt;q.spin=0;
+      }else{
+        q.vy+=1050*dt;q.x+=q.vx*dt;q.y+=q.vy*dt;q.spin+=dt*7*(q.vx<0?-1:1);
+      }
 
       let broken=false;
       if(overlap(q,player)){
         if(player.parryTimer>0){
           triggerParry(q.x+q.w/2,q.y+q.h/2);
           player.parryTimer=0;
-          // ツボを敵側へ打ち返す
-          q.vx=-q.vx*1.25;
-          q.vy=-430;
+          // 投擲物も銃弾も爪で打ち返せる。弾丸は一直線に「カキン！」。
+          q.vx=-q.vx*(q.bullet?1.05:1.25);
+          q.vy=q.bullet?0:-430;
           q.returned=true;
           q.ownerSafe=.12;
         }else if(player.invuln<=0){
-          hurtPlayer(2,300*(q.vx<0?-1:1),-260);
+          hurtPlayer(q.bullet?3:2,(q.bullet?520:300)*(q.vx<0?-1:1),q.bullet?-120:-260);
           broken=true;
         }
       }
@@ -1468,7 +1526,7 @@
       if(q.returned && q.ownerSafe<=0){
         for(const e of [...enemies,...throwers,boss]){
           if(!e.alive || !overlap(q,e)) continue;
-          e.hp-=3;
+          e.hp-=q.bullet?8:3;
           e.flash=.12;
           e.vx=(q.vx<0?-1:1)*190;
           e.hitPause=Math.max(e.hitPause||0,.15);
@@ -1543,7 +1601,7 @@
     }
 
     // 終端エリアに入るとボス戦。倒すまで arena から先へは抜けない。
-    if(boss.alive && player.x>3550) boss.active=true;
+    if(boss.alive && (currentStage===10 ? player.y<650 : player.x>3550)) boss.active=true;
     if(boss.active && boss.alive){
       boss.flash=Math.max(0,boss.flash-dt);
       boss.hitPause=Math.max(0,(boss.hitPause||0)-dt);
@@ -1556,7 +1614,39 @@
       boss.facing=dx<0?-1:1;
       const dist=Math.abs(dx);
 
-      if(currentStage===9){
+      if(currentStage===10){
+        // ラスボス：ピストルで間合いを作る。予兆→発砲。近距離は銃床打ち。
+        boss.gunCooldown=Math.max(0,(boss.gunCooldown||0)-dt);
+        if(boss.hitPause>0){
+          boss.vx*=Math.pow(.08,dt);boss.x+=boss.vx*dt;
+        }else if(boss.attackTimer>0){
+          boss.vx=0;
+          const elapsed=.72-boss.attackTimer;
+          if(boss.weaponMode==="pistol"){
+            if(!boss.attackHitDone && elapsed>.31){
+              boss.attackHitDone=true;
+              const sx=boss.x+boss.w/2+boss.facing*48,sy=boss.y+42;
+              pots.push({x:sx-6,y:sy-4,w:12,h:8,vx:boss.facing*1280,vy:0,spin:0,alive:true,bullet:true,ownerSafe:.10});
+            }
+          }else if(!boss.attackHitDone && elapsed>.22){
+            boss.attackHitDone=true;
+            const hb={x:boss.facing>0?boss.x+boss.w-18:boss.x-76,y:boss.y+16,w:94,h:72};
+            if(overlap(hb,player)){
+              if(player.parryTimer>0){triggerParry(player.x+player.w/2,player.y+player.h*.42);player.parryTimer=0;boss.attackTimer=0;boss.attackCooldown=.95;boss.vx=-boss.facing*320;}
+              else hurtPlayer(4,720*boss.facing,-280);
+            }
+          }
+        }else if(dist<125 && boss.attackCooldown<=0){
+          boss.weaponMode="gunbutt";boss.attackTimer=.72;boss.attackCooldown=.62;boss.attackHitDone=false;
+        }else if(dist>165 && boss.gunCooldown<=0 && boss.attackCooldown<=0){
+          boss.weaponMode="pistol";boss.attackTimer=.72;boss.attackCooldown=.72;boss.gunCooldown=.92+Math.random()*.28;boss.attackHitDone=false;
+        }else if(dist<220){
+          boss.vx=-boss.facing*150;boss.x+=boss.vx*dt;
+        }else if(dist>520){
+          boss.vx=boss.facing*110;boss.x+=boss.vx*dt;
+        }else boss.vx=0;
+        boss.x=Math.max(350,Math.min(3750-boss.w,boss.x));boss.y=boss.baseY;
+      }else if(currentStage===9){
         // 地下施設の副官：トンファー。高速接近→二連打、時々跳び込み。
         if(boss.jumping){
           boss.vy+=2000*dt;boss.x+=boss.vx*dt;boss.y+=boss.vy*dt;
@@ -1852,8 +1942,9 @@
         boss.x=Math.max(3650,Math.min(4090-boss.w,boss.x));
       }
 
-      // ボス戦中は画面外へ逃げ切れない程度の簡易 arena
-      player.x=Math.max(3560,Math.min(4140-player.w,player.x));
+      // ボス戦中の簡易 arena。最終戦は屋上全体を使える。
+      if(currentStage===10) player.x=Math.max(300,Math.min(3800-player.w,player.x));
+      else player.x=Math.max(3560,Math.min(4140-player.w,player.x));
     }
     if(!boss.alive && boss.active && !stageCleared){
       stageCleared=true;
@@ -1891,6 +1982,50 @@
     ctx.arcTo(x,y+h,x,y,rr);
     ctx.arcTo(x,y,x+w,y,rr);
     ctx.closePath();
+  }
+
+  function drawStage10Background(){
+    const w=innerWidth,h=innerHeight;
+    const g=ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,"#11162a");g.addColorStop(.55,"#27314b");g.addColorStop(1,"#66515b");
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);ctx.save();
+
+    // 窓の外は夜明け前の高層都市。登るほど空が広くなる。
+    for(let i=0;i<12;i++){
+      const bw=150+(i%3)*45,bh=360+(i%5)*95;
+      const x=(i*390-camera.x*.16)-220,y=h-bh+camera.y*.08;
+      ctx.fillStyle="#1c2638";ctx.fillRect(x,y,bw,bh);
+      ctx.fillStyle="rgba(235,202,112,.38)";
+      for(let yy=y+35;yy<y+bh-20;yy+=58)for(let xx=x+24;xx<x+bw-20;xx+=48)ctx.fillRect(xx,yy,17,22);
+    }
+
+    // ビル内部の柱とガラス壁
+    for(let x0=250;x0<4200;x0+=520){
+      const x=x0-camera.x;ctx.fillStyle="#242b35";ctx.fillRect(x,430-camera.y,42,1490);
+      ctx.fillStyle="rgba(91,128,153,.18)";ctx.fillRect(x+42,470-camera.y,390,1370);
+      ctx.strokeStyle="rgba(167,194,207,.28)";ctx.lineWidth=3;ctx.strokeRect(x+42,470-camera.y,390,1370);
+    }
+
+    // 各フロアの天井照明。右→左→右→左の折り返しが見える。
+    for(const fy of [1640,1360,1080,800,520]){
+      const y=fy-camera.y;ctx.fillStyle="#303944";ctx.fillRect(-camera.x,y-18,4200,18);
+      ctx.fillStyle="rgba(235,238,220,.72)";
+      for(let x0=430;x0<3800;x0+=420)ctx.fillRect(x0-camera.x,y-12,190,5);
+    }
+
+    // 端の階段方向サイン
+    const signs=[[3500,1510,"UP ↗"],[470,1230,"↖ UP"],[3500,950,"UP ↗"],[470,670,"↖ ROOF"]];
+    for(const [x0,y0,t] of signs){
+      const x=x0-camera.x,y=y0-camera.y;ctx.fillStyle="#17334a";ctx.fillRect(x,y,135,46);
+      ctx.fillStyle="#d9eef4";ctx.font="bold 17px sans-serif";ctx.textAlign="center";ctx.fillText(t,x+67,y+30);ctx.textAlign="left";
+    }
+
+    // 最上階～屋上のヘリポート風スペース
+    const roofY=520-camera.y;
+    ctx.fillStyle="rgba(16,21,30,.72)";ctx.fillRect(300-camera.x,roofY-230,3500,230);
+    ctx.strokeStyle="#b8a65b";ctx.lineWidth=6;ctx.beginPath();ctx.arc(3200-camera.x,roofY-8,125,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle="#b8a65b";ctx.font="bold 72px sans-serif";ctx.textAlign="center";ctx.fillText("H",3200-camera.x,roofY+18);ctx.textAlign="left";
+    ctx.restore();
   }
 
   function drawStage9Background(){
@@ -2540,6 +2675,7 @@
   }
 
   function drawBackground(){
+    if(currentStage===10){drawStage10Background();return;}
     if(currentStage===9){drawStage9Background();return;}
     if(currentStage===8){drawStage8Background();return;}
     if(currentStage===7){drawStage7Background();return;}
@@ -2688,6 +2824,16 @@
   function drawPlatform(p){
     const x=p.x-camera.x, y=p.y-camera.y;
 
+    if(currentStage===10){
+      if(p.climbThrough){
+        const cx=x+p.w/2;ctx.save();ctx.strokeStyle="#48535f";ctx.lineWidth=10;
+        ctx.beginPath();ctx.moveTo(cx-15,y);ctx.lineTo(cx-15,y+p.h);ctx.moveTo(cx+15,y);ctx.lineTo(cx+15,y+p.h);ctx.stroke();
+        ctx.lineWidth=4;for(let yy=y+24;yy<y+p.h;yy+=31){ctx.beginPath();ctx.moveTo(cx-15,yy);ctx.lineTo(cx+15,yy);ctx.stroke();}
+        ctx.restore();return;
+      }
+      if(p.oneWay){ctx.fillStyle="#343d48";ctx.fillRect(x,y,p.w,p.h);ctx.fillStyle="#84929c";ctx.fillRect(x,y,p.w,8);return;}
+      ctx.fillStyle="#303741";roundedRect(x,y,p.w,p.h,3);ctx.fill();ctx.fillStyle="#66737d";ctx.fillRect(x,y,p.w,10);return;
+    }
     if(currentStage===9){
       if(p.climbThrough){
         const cx=x+p.w/2;ctx.save();ctx.strokeStyle="#657279";ctx.lineWidth=9;
@@ -2943,6 +3089,10 @@
     const x=q.x-camera.x,y=q.y-camera.y;
     ctx.save();
     ctx.translate(x+q.w/2,y+q.h/2);
+    if(q.bullet){
+      ctx.strokeStyle="#fff2b0";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-22*(q.vx<0?-1:1),0);ctx.lineTo(8*(q.vx<0?-1:1),0);ctx.stroke();
+      ctx.fillStyle="#fff8d2";ctx.beginPath();ctx.arc(0,0,4,0,Math.PI*2);ctx.fill();ctx.restore();return;
+    }
     ctx.rotate(q.spin);
     if(currentStage===5){
       ctx.fillStyle="#88939b";roundedRect(-8,-13,16,26,4);ctx.fill();
@@ -2994,7 +3144,29 @@
     ctx.scale(e.facing,1);
     if(e.flash>0) ctx.globalAlpha=.48;
 
-    if(currentStage===9){
+    if(currentStage===10){
+      // ラスボス：白いスーツの獅子。ピストルは明確な予兆を見せてから発砲。
+      ctx.strokeStyle="#25272b";ctx.lineWidth=18;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(-23,35);ctx.lineTo(-30,59);ctx.stroke();ctx.beginPath();ctx.moveTo(23,35);ctx.lineTo(30,59);ctx.stroke();
+      ctx.fillStyle="#dedbd2";roundedRect(-41,-6,82,61,10);ctx.fill();
+      ctx.fillStyle="#f1eee5";ctx.beginPath();ctx.moveTo(-25,-3);ctx.lineTo(0,30);ctx.lineTo(27,-3);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#282b31";ctx.beginPath();ctx.moveTo(-4,1);ctx.lineTo(5,1);ctx.lineTo(7,27);ctx.lineTo(0,33);ctx.lineTo(-7,27);ctx.closePath();ctx.fill();
+      // 獅子のたてがみ
+      ctx.fillStyle="#8a633f";ctx.beginPath();ctx.arc(0,-42,42,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#c99b63";ctx.beginPath();ctx.ellipse(5,-42,30,27,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(27,-31,18,12,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#f0d36e";ctx.beginPath();ctx.arc(15,-47,4,0,Math.PI*2);ctx.fill();
+
+      const t=e.attackTimer>0?Math.max(0,Math.min(1,(.72-e.attackTimer)/.72)):0;
+      const aim=e.attackTimer>0?Math.min(1,t/.38):0;
+      ctx.strokeStyle="#dedbd2";ctx.lineWidth=14;ctx.beginPath();ctx.moveTo(22,3);ctx.lineTo(39+15*aim,-4-9*aim);ctx.stroke();
+      ctx.save();ctx.translate(40+15*aim,-4-9*aim);ctx.rotate(-.05);
+      ctx.fillStyle="#292c31";roundedRect(0,-6,42,13,3);ctx.fill();ctx.fillRect(8,5,12,15);
+      if(e.weaponMode==="pistol" && e.attackTimer>0 && t>.38 && t<.53){
+        ctx.fillStyle="#fff0a0";ctx.beginPath();ctx.moveTo(45,0);ctx.lineTo(67,-12);ctx.lineTo(60,0);ctx.lineTo(68,12);ctx.closePath();ctx.fill();
+      }
+      ctx.restore();
+    }else if(currentStage===9){
       // 狼の副官。防具付きの黒装束＋両手トンファー。
       ctx.strokeStyle="#1d2328";ctx.lineWidth=18;ctx.lineCap="round";
       ctx.beginPath();ctx.moveTo(-23,35);ctx.lineTo(-30,59);ctx.stroke();ctx.beginPath();ctx.moveTo(23,35);ctx.lineTo(30,59);ctx.stroke();
@@ -3794,14 +3966,9 @@
       const fade=Math.max(0,Math.min(1,(700-player.x)/300));
       ctx.save();ctx.globalAlpha=.78*fade;ctx.textAlign="center";ctx.fillStyle="#fff";
       ctx.font="bold 24px serif";
-      const stageName=currentStage===1?"第一幕　古街":
-        (currentStage===2?"第二幕　港街":
-        (currentStage===3?"第三幕　新市街":
-        (currentStage===4?"第四幕　工場街":
-        (currentStage===5?"第五幕　海外街":
-        (currentStage===6?"第六幕　港湾倉庫":
-        (currentStage===7?"第七幕　山岳寺院":
-        (currentStage===8?"第八幕　現代繁華街":"第九幕　地下施設")))))));
+      const stageNames=["","第一幕　古街","第二幕　港街","第三幕　新市街","第四幕　工場街","第五幕　海外街",
+        "第六幕　港湾倉庫","第七幕　山岳寺院","第八幕　現代繁華街","第九幕　地下施設","最終幕　高層ビル"];
+      const stageName=stageNames[currentStage]||("STAGE "+currentStage);
       ctx.fillText(stageName,innerWidth/2,88);
       ctx.font="14px sans-serif";
       ctx.fillText("STAGE "+currentStage,innerWidth/2,110);
@@ -3928,6 +4095,10 @@
         ctx.fillStyle="#fff";ctx.font="bold 26px serif";ctx.fillText("第八幕　現代繁華街　突破",innerWidth/2,innerHeight*.43);
         ctx.font="19px sans-serif";ctx.fillText("敵組織を追って地下へ―― 第九幕「地下施設」",innerWidth/2,innerHeight*.53);
         if(clearTimer>.65){ctx.font="bold 17px sans-serif";ctx.fillText("攻撃・爪・ダッシュ・ジャンプで次へ",innerWidth/2,innerHeight*.64);}
+      }else if(currentStage===9){
+        ctx.fillStyle="#fff";ctx.font="bold 26px serif";ctx.fillText("第九幕　地下施設　突破",innerWidth/2,innerHeight*.43);
+        ctx.font="19px sans-serif";ctx.fillText("エレベーターで敵の本拠へ―― 最終幕「高層ビル」",innerWidth/2,innerHeight*.53);
+        if(clearTimer>.65){ctx.font="bold 17px sans-serif";ctx.fillText("攻撃・爪・ダッシュ・ジャンプで最終決戦へ",innerWidth/2,innerHeight*.64);}
       }else{
         const [rank,ending]=resultText();
         ctx.fillStyle="#fff";
