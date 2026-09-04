@@ -157,8 +157,27 @@
   let currentStage=1;
   let stageCleared=false;
   let clearTimer=0;
+  let sageUnlocked=false;
+  let sageMode=false;
+  try{
+    sageUnlocked=localStorage.getItem("catLeeSageUnlocked")==="1";
+    sageMode=localStorage.getItem("catLeeStartSage")==="1";
+    if(sageMode){sageUnlocked=true;localStorage.removeItem("catLeeStartSage");}
+  }catch{}
+  const sageWaves=[];
+  function activateSage(){
+    sageMode=true;sageUnlocked=true;player.maxHp=40;player.hp=40;player.invuln=1;
+    try{localStorage.setItem("catLeeSageUnlocked","1");}catch{}
+  }
+  function spawnSageWave(dir="forward",counter=false){
+    const f=player.facing;
+    sageWaves.push({x:player.x+player.w/2+42*f,y:player.y+player.h*.42,
+      vx:(dir==="up"?760:1180)*f,vy:dir==="up"?-760:0,life:.72,maxLife:.72,
+      r:counter?92:78,damage:counter?38:34,hit:new Set(),facing:f});
+  }
 
   const camera = {x:0,y:0};
+  if(sageMode){player.maxHp=40;player.hp=40;}
 
   function initEnemyState(e){
     e.facing = player.x < e.x ? -1 : 1;
@@ -529,7 +548,7 @@
     Object.assign(player,{x:180,y:1788,vx:0,vy:0,facing:1,grounded:false,onWall:0,wallLatched:false,
       wallLatchSide:0,wallRef:null,wallJumpUsed:false,dashTimer:0,dashCooldown:0,attackTimer:0,
       attackType:"",comboStep:0,comboWindow:0,invuln:1,respawnTimer:0,respawnX:180,respawnY:1788});
-    player.hp=player.maxHp;camera.x=0;camera.y=0;
+    if(sageMode)player.maxHp=40;player.hp=player.maxHp;camera.x=0;camera.y=0;
   }
 
   
@@ -566,7 +585,7 @@
     Object.assign(player,{x:180,y:1788,vx:0,vy:0,facing:1,grounded:false,onWall:0,wallLatched:false,
       wallLatchSide:0,wallRef:null,wallJumpUsed:false,dashTimer:0,dashCooldown:0,attackTimer:0,
       attackType:"",comboStep:0,comboWindow:0,invuln:1,respawnTimer:0,respawnX:180,respawnY:1788});
-    player.hp=player.maxHp;camera.x=0;camera.y=0;
+    if(sageMode)player.maxHp=40;player.hp=player.maxHp;camera.x=0;camera.y=0;
   }
 
   
@@ -603,7 +622,7 @@
     Object.assign(player,{x:180,y:1788,vx:0,vy:0,facing:1,grounded:false,onWall:0,wallLatched:false,
       wallLatchSide:0,wallRef:null,wallJumpUsed:false,dashTimer:0,dashCooldown:0,attackTimer:0,
       attackType:"",comboStep:0,comboWindow:0,invuln:1,respawnTimer:0,respawnX:180,respawnY:1788});
-    player.hp=player.maxHp;camera.x=0;camera.y=0;
+    if(sageMode)player.maxHp=40;player.hp=player.maxHp;camera.x=0;camera.y=0;
   }
 
 
@@ -655,7 +674,7 @@
     Object.assign(player,{x:180,y:1788,vx:0,vy:0,facing:1,grounded:false,onWall:0,wallLatched:false,
       wallLatchSide:0,wallRef:null,wallJumpUsed:false,dashTimer:0,dashCooldown:0,attackTimer:0,
       attackType:"",comboStep:0,comboWindow:0,invuln:1,respawnTimer:0,respawnX:180,respawnY:1788});
-    player.hp=player.maxHp;camera.x=0;camera.y=0;
+    if(sageMode)player.maxHp=40;player.hp=player.maxHp;camera.x=0;camera.y=0;
   }
 
 // 攻撃エフェクト兼ヒット判定。短時間だけ残る。
@@ -839,7 +858,8 @@
     spawnAttackFX({
       type:"parrySpark",x:x,y:y,
       life:.26,maxLife:.26
-    });
+    });    if(sageMode) spawnSageWave("forward",true);
+
   }
 
   function defeatPlayer(){
@@ -857,6 +877,7 @@
 
   function hurtPlayer(damage, kx=0, ky=-220){
     if(player.invuln>0 || player.respawnTimer>0 || stageCleared) return;
+    if(sageMode){damage=Math.min(1,damage);kx*=.12;ky*=.18;}
     player.hp=Math.max(0,player.hp-damage);
     player.vx=kx;
     player.vy=ky;
@@ -948,6 +969,12 @@
   }
 
   function doAttack(){
+    if(sageMode){
+      if(player.attackTimer>0)return;
+      if(input.y<-.28){startAttack("dashupper",.34);spawnSageWave("up",false);}
+      else{startAttack("straight",.29);spawnSageWave("forward",false);}
+      return;
+    }
     const airKickChain = !player.grounded && player.attackType==="airkick" && player.attackTimer<.18;
     if(player.attackTimer>0 && !airKickChain) return;
 
@@ -1055,6 +1082,7 @@
     }
   }
   function doClaw(){
+    if(sageMode){player.parryTimer=.35;player.parryCooldown=0;return;}
     // 爪は攻撃だけでなく防御にも使える。受付は広めの約0.30秒。
     if(player.parryCooldown<=0){
       player.parryTimer=.30;
@@ -1124,6 +1152,15 @@
     }
   }
   function doDash(){
+    if(sageMode){
+      const dir=Math.abs(input.x)>.25?Math.sign(input.x):player.facing;player.facing=dir;
+      const target=dir>0?camera.x+innerWidth-120:camera.x+48;
+      player.x=Math.max(20,Math.min(WORLD.width-player.w-20,target));
+      player.vx=dir*120;player.invuln=.55;player.dashCooldown=.12;
+      spawnAttackFX({type:"dashClawTrail",x:player.x+player.w/2,y:player.y+player.h/2,facing:dir,
+        life:.22,maxLife:.22,damage:18,kx:900*dir,ky:-250,length:210,height:player.h*.9});
+      return;
+    }
     // 敵と反対方向＋ダッシュで無敵バックステップ。
     // 近くに敵がいない時は「向いている方向の後ろ入力」で判定。
     let nearest=null, nearestDist=99999;
@@ -1264,6 +1301,10 @@
         loadStage10();
         return;
       }
+      if(currentStage===10 && clearTimer>.8 && input.clawPressed){
+        try{localStorage.setItem("catLeeSageUnlocked","1");localStorage.setItem("catLeeStartSage","1");}catch{}
+        location.reload();return;
+      }
       input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
       return;
     }
@@ -1282,8 +1323,12 @@
     }
 
     player.animTime += dt;
+    if(!sageMode && sageUnlocked && currentStage===1 && player.x<700 && input.claw && input.dash){
+      activateSage();input.clawPressed=input.dashPressed=false;
+    }
     player.parryTimer=Math.max(0,player.parryTimer-dt);
     player.parryCooldown=Math.max(0,player.parryCooldown-dt);
+    if(sageMode && input.claw){player.parryTimer=.35;player.parryCooldown=0;}
     player.parrySuccess=Math.max(0,player.parrySuccess-dt);
     player.backstepTimer=Math.max(0,player.backstepTimer-dt);
 
@@ -1545,6 +1590,19 @@
       if(broken || q.y>WORLD.height+100 || q.x<-100 || q.x>WORLD.width+100){
         pots.splice(i,1);
       }
+    }
+
+    for(let wi=sageWaves.length-1;wi>=0;wi--){
+      const wv=sageWaves[wi];wv.life-=dt;wv.x+=wv.vx*dt;wv.y+=wv.vy*dt;
+      const box={x:wv.x-wv.r,y:wv.y-wv.r*.65,w:wv.r*2,h:wv.r*1.3};
+      for(const e of [...enemies,...throwers,boss]){
+        if(!e.alive||wv.hit.has(e)||!overlap(box,e))continue;
+        wv.hit.add(e);e.hp-=wv.damage;e.flash=.18;e.vx=wv.facing*1150;e.vy=-720;
+        e.hitPause=Math.max(e.hitPause||0,.48);spawnHitSpark(e.x+e.w/2,e.y+e.h*.42,"hit");
+        if(e.hp<=0)e.alive=false;
+      }
+      for(let qi=pots.length-1;qi>=0;qi--)if(overlap(box,pots[qi]))pots.splice(qi,1);
+      if(wv.life<=0||wv.x<-200||wv.x>WORLD.width+200||wv.y<-200)sageWaves.splice(wi,1);
     }
 
     for(const e of enemies){
@@ -1947,6 +2005,7 @@
       else player.x=Math.max(3560,Math.min(4140-player.w,player.x));
     }
     if(!boss.alive && boss.active && !stageCleared){
+      if(currentStage===10){sageUnlocked=true;try{localStorage.setItem("catLeeSageUnlocked","1");}catch{}}
       stageCleared=true;
       clearTimer=0;
       player.vx=0;
@@ -3717,6 +3776,9 @@
     ctx.translate(x+tx*f,y+bob+ty+crouch);
     ctx.scale(f,1);
     ctx.scale(1.18,1.18);
+    if(sageMode){
+      ctx.save();ctx.globalAlpha=.18;ctx.fillStyle="#fff2a8";ctx.beginPath();ctx.ellipse(0,0,62,82,0,0,Math.PI*2);ctx.fill();ctx.restore();
+    }
 
     if(type==="somersault" && p.attackTimer>0){
       ctx.rotate(-Math.PI*2*u);
@@ -3985,7 +4047,7 @@
     roundedRect(16,16,178,28,10);ctx.fill();
     ctx.fillStyle="#f2d45c";
     ctx.font="bold 14px sans-serif";
-    ctx.fillText("CAT LEE",26,35);
+    ctx.fillText(sageMode?"猫仙人":"CAT LEE",26,35);
     ctx.fillStyle="#402b2b";
     ctx.fillRect(91,25,92,10);
     ctx.fillStyle="#55c86f";
@@ -3999,6 +4061,13 @@
     ctx.textAlign="center";
     ctx.fillText("❌ "+player.deaths,innerWidth-59,39);
 
+    if(sageMode){
+      ctx.fillStyle="#fff2a8";ctx.font="bold 15px sans-serif";ctx.textAlign="center";
+      ctx.fillText("猫仙人・無双状態",innerWidth/2,112);ctx.textAlign="left";
+    }else if(sageUnlocked&&currentStage===1&&player.x<700){
+      ctx.fillStyle="#fff2a8";ctx.font="bold 14px sans-serif";ctx.textAlign="center";
+      ctx.fillText("解放済：爪＋ダッシュ同時押し → 猫仙人",innerWidth/2,112);ctx.textAlign="left";
+    }
     if(player.parrySuccess>0){
       ctx.fillStyle="#fff";
       ctx.font="bold 20px sans-serif";
@@ -4109,8 +4178,13 @@
         ctx.font="18px sans-serif";
         ctx.fillText(ending,innerWidth/2,innerHeight*.60);
         if(player.deaths>=20){
-          ctx.font="48px sans-serif";
-          ctx.fillText("🏥",innerWidth/2,innerHeight*.70);
+          ctx.font="48px sans-serif";ctx.fillText("🏥",innerWidth/2,innerHeight*.70);
+        }
+        if(currentStage===10){
+          ctx.fillStyle="#fff2a8";ctx.font="bold 20px sans-serif";
+          ctx.fillText("クリア特典：猫仙人 解放！",innerWidth/2,innerHeight*.73);
+          ctx.fillStyle="#fff";ctx.font="bold 16px sans-serif";
+          ctx.fillText("爪ボタンで『猫仙人・無双周回』を開始",innerWidth/2,innerHeight*.79);
         }
       }
     }
@@ -4126,6 +4200,12 @@
     for(const e of throwers) drawThrower(e);
     drawBoss(boss);
     for(const q of pots) drawPot(q);
+    for(const wv of sageWaves){
+      const a=Math.max(0,wv.life/wv.maxLife),x=wv.x-camera.x,y=wv.y-camera.y;
+      ctx.save();ctx.globalAlpha=.22+.55*a;ctx.strokeStyle="#fff6c7";ctx.lineWidth=14;
+      ctx.beginPath();ctx.ellipse(x,y,wv.r*(1.35+(1-a)*.8),wv.r*.72,0,0,Math.PI*2);ctx.stroke();
+      ctx.globalAlpha=.14+.25*a;ctx.lineWidth=34;ctx.stroke();ctx.restore();
+    }
 
     // 攻撃残像
     for(const fx of attackFX){
