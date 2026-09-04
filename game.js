@@ -76,7 +76,13 @@
     airDashAvailable:true,
     airKickSide:0,
     airKickCount:0,
-    lastDirX:0, lastDirTimer:0
+    lastDirX:0, lastDirTimer:0,
+    maxHp:10,
+    hp:10,
+    deaths:0,
+    respawnTimer:0,
+    respawnX:220,
+    respawnY:1760
   };
 
   // 敵AI用の状態。player生成後に初期化する。
@@ -94,6 +100,23 @@
     {x:2980,y:1456,w:56,h:76,hp:3,alive:true,facing:-1,throwTimer:2.0,flash:0}
   ];
   const pots = [];
+
+  // ステージ終端ボス
+  const boss = {
+    x:3940,y:1774,w:92,h:116,
+    hp:36,maxHp:36,
+    vx:0,vy:0,
+    facing:-1,
+    flash:0,
+    alive:true,
+    active:false,
+    attackTimer:0,
+    attackCooldown:1.0,
+    attackHitDone:false,
+    walkPhase:0
+  };
+  let stageCleared=false;
+  let clearTimer=0;
 
   const camera = {x:0,y:0};
 
@@ -261,6 +284,40 @@
     }
   }
 
+  function defeatPlayer(){
+    if(player.respawnTimer>0 || stageCleared) return;
+    player.deaths++;
+    player.hp=0;
+    player.respawnTimer=.85;
+    player.vx=0;
+    player.vy=0;
+    player.wallLatched=false;
+    player.wallRef=null;
+    player.attackTimer=0;
+    player.dashTimer=0;
+  }
+
+  function hurtPlayer(damage, kx=0, ky=-220){
+    if(player.invuln>0 || player.respawnTimer>0 || stageCleared) return;
+    player.hp=Math.max(0,player.hp-damage);
+    player.vx=kx;
+    player.vy=ky;
+    player.invuln=.72;
+    if(player.hp<=0) defeatPlayer();
+  }
+
+  function revivePlayer(){
+    player.hp=player.maxHp;
+    player.x=Math.max(40,Math.min(WORLD.width-player.w-40,player.respawnX));
+    player.y=Math.max(120,Math.min(1810,player.respawnY-34));
+    player.vx=0; player.vy=0;
+    player.invuln=1.25;
+    player.respawnTimer=0;
+    player.wallLatched=false;
+    player.wallRef=null;
+    pots.length=0;
+  }
+
   function startAttack(type, duration=.24){
     player.attackType = type;
     player.attackTimer = duration;
@@ -282,10 +339,10 @@
       case "dashupper": hb={x:f>0?p.x+p.w-8:p.x-58,y:p.y-12,w:66,h:88,damage:4,kx:300*f,ky:-720}; break;
       case "dashclaw": hb={x:f>0?p.x+p.w-8:p.x-98,y:p.y+2,w:106,h:p.h-4,damage:4,kx:760*f,ky:-80}; break;
       case "clawstrike": hb={x:f>0?p.x+p.w-8:p.x-70,y:p.y+12,w:78,h:62,damage:2,kx:390*f,ky:-130}; break;
-      case "clawdown": hb={x:f>0?p.x+p.w-6:p.x-64,y:p.y+4,w:70,h:78,damage:2,kx:360*f,ky:180}; break;
-      case "wallup": hb={x:f>0?p.x+p.w-4:p.x-62,y:p.y-34,w:64,h:64,damage:3,kx:420*f,ky:-620}; break;
-      case "wallside": hb={x:f>0?p.x+p.w-4:p.x-72,y:p.y+18,w:76,h:46,damage:3,kx:650*f,ky:-120}; break;
-      case "walldown": hb={x:f>0?p.x+p.w-4:p.x-60,y:p.y+48,w:64,h:62,damage:3,kx:430*f,ky:520}; break;
+      case "clawdown": hb={x:f>0?p.x+p.w-6:p.x-64,y:p.y+4,w:70,h:78,damage:4,kx:420*f,ky:220}; break;
+      case "wallup": hb={x:f>0?p.x+p.w-4:p.x-66,y:p.y-38,w:68,h:68,damage:4,kx:500*f,ky:-700}; break;
+      case "wallside": hb={x:f>0?p.x+p.w-4:p.x-78,y:p.y+14,w:82,h:50,damage:4,kx:760*f,ky:-140}; break;
+      case "walldown": hb={x:f>0?p.x+p.w-4:p.x-66,y:p.y+44,w:70,h:68,damage:4,kx:520*f,ky:600}; break;
     }
     return hb;
   }
@@ -295,7 +352,7 @@
     if(player.attackTimer<=0) return;
     const hb=attackHitbox();
     if(!hb) return;
-    for(const e of [...enemies,...throwers]){
+    for(const e of [...enemies,...throwers,boss]){
       if(!e.alive || !overlap(hb,e)) continue;
       let mark = hitMemory.get(e);
       if(mark === player.attackType + ":" + Math.floor(player.attackTimer*100)) continue;
@@ -319,11 +376,26 @@
       player.wallLatched = false;
       player.wallRef=null;
       if(input.y < -.35){
-        player.vx = 560*away; player.vy=-720; startAttack("wallup",.34);
+        player.vx = 700*away; player.vy=-820; startAttack("wallup",.31);
+        spawnAttackFX({
+          type:"wallKickAir", dir:"up",
+          x:player.x+player.w/2, y:player.y+player.h*.52,
+          facing:away, life:.24,maxLife:.24
+        });
       }else if(input.y > .35){
-        player.vx = 560*away; player.vy=620; startAttack("walldown",.34);
+        player.vx = 690*away; player.vy=720; startAttack("walldown",.31);
+        spawnAttackFX({
+          type:"wallKickAir", dir:"down",
+          x:player.x+player.w/2, y:player.y+player.h*.58,
+          facing:away, life:.24,maxLife:.24
+        });
       }else{
-        player.vx = 840*away; player.vy=-90; startAttack("wallside",.32);
+        player.vx = 960*away; player.vy=-100; startAttack("wallside",.29);
+        spawnAttackFX({
+          type:"wallKickAir", dir:"side",
+          x:player.x+player.w/2, y:player.y+player.h*.58,
+          facing:away, life:.22,maxLife:.22
+        });
       }
       return;
     }
@@ -428,7 +500,7 @@
         y:player.y+player.h*.46,
         facing:player.facing,
         life:.32,maxLife:.32,delay:.07,
-        damage:4,kx:470*player.facing,
+        damage:7,kx:560*player.facing,
         rx:88,ry:86
       });
       return;
@@ -497,6 +569,20 @@
   }
 
   function update(dt){
+    if(stageCleared){
+      clearTimer+=dt;
+      input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
+      return;
+    }
+
+    if(player.respawnTimer>0){
+      player.respawnTimer-=dt;
+      player.animTime+=dt;
+      if(player.respawnTimer<=0) revivePlayer();
+      input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
+      return;
+    }
+
     if(player.hitStop>0){
       player.hitStop-=dt;
       return;
@@ -587,6 +673,9 @@
 
     // 地上に戻ったら壁関連状態を必ず解除。時々歩けなくなる原因の残留状態を消す。
     if(player.grounded){
+      // 落下直前ではなく、直近の安全な地上位置へ「その場復活」するための記録
+      player.respawnX=player.x;
+      player.respawnY=player.y;
       player.airKickCount=0;
       player.wallLatched=false;
       player.wallRef=null;
@@ -622,7 +711,7 @@
         const cx=fx.x + Math.cos(theta)*radiusX*fx.facing;
         const cy=fx.y + Math.sin(theta)*radiusY;
         const hb={x:cx-30,y:cy-30,w:60,h:60};
-        for(const e of [...enemies,...throwers]){
+        for(const e of [...enemies,...throwers,boss]){
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
@@ -636,7 +725,7 @@
         // 発生位置から進行方向へ伸びる体高サイズの帯
         const left = fx.facing>0 ? fx.x-18 : fx.x-fx.length+18;
         const hb={x:left,y:fx.y-fx.height/2,w:fx.length,h:fx.height};
-        for(const e of [...enemies,...throwers]){
+        for(const e of [...enemies,...throwers,boss]){
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
@@ -652,7 +741,7 @@
         const cx=fx.x + Math.cos(theta)*fx.rx*fx.facing;
         const cy=fx.y + Math.sin(theta)*fx.ry;
         const hb={x:cx-32,y:cy-28,w:64,h:56};
-        for(const e of [...enemies,...throwers]){
+        for(const e of [...enemies,...throwers,boss]){
           if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
@@ -696,9 +785,7 @@
 
       let broken=false;
       if(player.invuln<=0 && overlap(q,player)){
-        player.vx=300*(q.vx<0?-1:1);
-        player.vy=-260;
-        player.invuln=.7;
+        hurtPlayer(2,300*(q.vx<0?-1:1),-260);
         broken=true;
       }
       if(!broken){
@@ -730,9 +817,7 @@
           e.attackHitDone=true;
           const hb={x:e.facing>0?e.x+e.w-4:e.x-54,y:e.y-12,w:58,h:e.h+20};
           if(player.invuln<=0 && overlap(hb,player)){
-            player.vx=420*e.facing;
-            player.vy=-260;
-            player.invuln=.75;
+            hurtPlayer(2,420*e.facing,-260);
           }
         }
       }else if(dist<92 && e.attackCooldown<=0){
@@ -755,8 +840,54 @@
       }
     }
 
+    // 終端エリアに入るとボス戦。倒すまで arena から先へは抜けない。
+    if(boss.alive && player.x>3550) boss.active=true;
+    if(boss.active && boss.alive){
+      boss.flash=Math.max(0,boss.flash-dt);
+      boss.attackTimer=Math.max(0,boss.attackTimer-dt);
+      boss.attackCooldown=Math.max(0,boss.attackCooldown-dt);
+      boss.walkPhase+=dt*8;
+
+      const dx=(player.x+player.w/2)-(boss.x+boss.w/2);
+      boss.facing=dx<0?-1:1;
+      const dist=Math.abs(dx);
+
+      if(boss.attackTimer>0){
+        const elapsed=.72-boss.attackTimer;
+        boss.vx=0;
+        if(!boss.attackHitDone && elapsed>.30){
+          boss.attackHitDone=true;
+          const hb={
+            x:boss.facing>0?boss.x+boss.w-8:boss.x-86,
+            y:boss.y+20,w:94,h:74
+          };
+          if(overlap(hb,player)) hurtPlayer(3,620*boss.facing,-340);
+        }
+      }else if(dist<130 && boss.attackCooldown<=0){
+        boss.attackTimer=.72;
+        boss.attackCooldown=.86+Math.random()*.38;
+        boss.attackHitDone=false;
+      }else if(dist<720 && dist>105){
+        boss.vx=boss.facing*150;
+      }else{
+        boss.vx=0;
+      }
+
+      boss.x+=boss.vx*dt;
+      boss.x=Math.max(3650,Math.min(4090-boss.w,boss.x));
+      // ボス戦中は画面外へ逃げ切れない程度の簡易 arena
+      player.x=Math.max(3560,Math.min(4140-player.w,player.x));
+    }
+
+    if(!boss.alive && boss.active && !stageCleared){
+      stageCleared=true;
+      clearTimer=0;
+      player.vx=0;
+      player.attackTimer=0;
+    }
+
     if(player.y>WORLD.height+300){
-      Object.assign(player,{x:220,y:1760,vx:0,vy:0,wallLatched:false});
+      defeatPlayer();
     }
 
     input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
@@ -917,6 +1048,51 @@
     ctx.quadraticCurveTo(0,17,11,9);ctx.quadraticCurveTo(15,-2,8,-11);
     ctx.closePath();ctx.fill();
     ctx.fillStyle="#713b2b";ctx.fillRect(-8,-14,16,5);
+    ctx.restore();
+  }
+
+  function drawBoss(e){
+    if(!e.alive) return;
+    const x=e.x-camera.x,y=e.y-camera.y;
+    const ap=e.attackTimer>0 ? 1-e.attackTimer/.72 : 0;
+    ctx.save();
+    ctx.translate(x+e.w/2,y+e.h/2);
+    ctx.scale(e.facing,1);
+    if(e.flash>0) ctx.globalAlpha=.48;
+
+    // 大柄な虎の武術家ボス
+    ctx.strokeStyle="#392d2b";ctx.lineWidth=16;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(-20,35);ctx.lineTo(-24,56);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(20,35);ctx.lineTo(27,56);ctx.stroke();
+
+    ctx.fillStyle="#6d1f24";
+    roundedRect(-34,-3,68,52,12);ctx.fill();
+    ctx.strokeStyle="#e4b848";ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(3,-1);ctx.lineTo(5,42);ctx.stroke();
+
+    ctx.fillStyle="#cf8446";
+    ctx.beginPath();ctx.ellipse(2,-39,34,31,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.moveTo(-22,-61);ctx.lineTo(-10,-79);ctx.lineTo(-2,-59);ctx.fill();
+    ctx.beginPath();ctx.moveTo(13,-60);ctx.lineTo(28,-77);ctx.lineTo(30,-52);ctx.fill();
+
+    // 虎縞
+    ctx.strokeStyle="#3a2924";ctx.lineWidth=5;
+    for(const yy of [-55,-43,-31]){
+      ctx.beginPath();ctx.moveTo(-16,yy);ctx.lineTo(-5,yy+5);ctx.stroke();
+    }
+    ctx.fillStyle="#171515";ctx.beginPath();ctx.arc(16,-43,4,0,Math.PI*2);ctx.fill();
+
+    // 前腕・ボスの大振り攻撃
+    ctx.strokeStyle="#cf8446";ctx.lineWidth=15;
+    ctx.beginPath();
+    ctx.moveTo(27,4);
+    if(e.attackTimer>0){
+      ctx.lineTo(42,-22+48*ap);ctx.lineTo(72,2+32*ap);
+    }else{
+      ctx.lineTo(41,14);ctx.lineTo(29,25);
+    }
+    ctx.stroke();
+
     ctx.restore();
   }
 
@@ -1422,12 +1598,90 @@
     ctx.restore();
   }
 
+  function resultText(){
+    const d=player.deaths;
+    if(d===0) return ["伝説級！ CAT LEE","ノーミスの達人エンディング"];
+    if(d<=3) return ["達人","見事なカンフー映画エンディング"];
+    if(d<=9) return ["なかなかやるニャ","ちょっと傷だらけの英雄エンディング"];
+    if(d<=19) return ["修行が足りん！","包帯だらけで祝勝会エンディング"];
+    return ["❌多すぎ！","病院のベッドで表彰される変なエンディング"];
+  }
+
+  function drawHUD(){
+    ctx.save();
+    // 体力
+    ctx.fillStyle="rgba(0,0,0,.48)";
+    roundedRect(16,16,178,28,10);ctx.fill();
+    ctx.fillStyle="#f2d45c";
+    ctx.font="bold 14px sans-serif";
+    ctx.fillText("CAT LEE",26,35);
+    ctx.fillStyle="#402b2b";
+    ctx.fillRect(91,25,92,10);
+    ctx.fillStyle="#55c86f";
+    ctx.fillRect(91,25,92*Math.max(0,player.hp/player.maxHp),10);
+
+    // 死亡回数：ゼロから増えていく
+    ctx.fillStyle="rgba(0,0,0,.48)";
+    roundedRect(innerWidth-102,16,86,32,10);ctx.fill();
+    ctx.fillStyle="#fff";
+    ctx.font="bold 19px sans-serif";
+    ctx.textAlign="center";
+    ctx.fillText("❌ "+player.deaths,innerWidth-59,39);
+
+    if(boss.active && boss.alive){
+      const bw=Math.min(430,innerWidth*.62);
+      const bx=(innerWidth-bw)/2;
+      ctx.fillStyle="rgba(0,0,0,.56)";
+      roundedRect(bx,60,bw,34,10);ctx.fill();
+      ctx.fillStyle="#fff";
+      ctx.font="bold 14px sans-serif";
+      ctx.fillText("BOSS",innerWidth/2,75);
+      ctx.fillStyle="#411b1b";
+      ctx.fillRect(bx+18,81,bw-36,7);
+      ctx.fillStyle="#d84d45";
+      ctx.fillRect(bx+18,81,(bw-36)*Math.max(0,boss.hp/boss.maxHp),7);
+    }
+
+    if(player.respawnTimer>0){
+      ctx.fillStyle="rgba(0,0,0,.55)";
+      ctx.fillRect(0,0,innerWidth,innerHeight);
+      ctx.fillStyle="#fff";
+      ctx.font="bold 28px sans-serif";
+      ctx.fillText("まだ終わらニャい！",innerWidth/2,innerHeight*.45);
+      ctx.font="bold 20px sans-serif";
+      ctx.fillText("❌ "+player.deaths,innerWidth/2,innerHeight*.45+38);
+    }
+
+    if(stageCleared && clearTimer>.45){
+      const [rank,ending]=resultText();
+      ctx.fillStyle="rgba(12,16,20,.82)";
+      ctx.fillRect(0,0,innerWidth,innerHeight);
+      ctx.fillStyle="#f2d45c";
+      ctx.font="bold 34px sans-serif";
+      ctx.fillText("STAGE CLEAR",innerWidth/2,innerHeight*.30);
+      ctx.fillStyle="#fff";
+      ctx.font="bold 28px sans-serif";
+      ctx.fillText(rank,innerWidth/2,innerHeight*.43);
+      ctx.font="bold 21px sans-serif";
+      ctx.fillText("ミス回数  ❌ "+player.deaths,innerWidth/2,innerHeight*.51);
+      ctx.font="18px sans-serif";
+      ctx.fillText(ending,innerWidth/2,innerHeight*.60);
+      if(player.deaths>=20){
+        ctx.font="48px sans-serif";
+        ctx.fillText("🏥",innerWidth/2,innerHeight*.70);
+      }
+    }
+    ctx.textAlign="left";
+    ctx.restore();
+  }
+
   function draw(){
     drawBackground();
     ctx.save();
     for(const p of platforms) drawPlatform(p);
     for(const e of enemies) drawEnemy(e);
     for(const e of throwers) drawThrower(e);
+    drawBoss(boss);
     for(const q of pots) drawPot(q);
 
     // 攻撃残像
@@ -1491,6 +1745,38 @@
         ctx.lineWidth=11;
         ctx.stroke();
         ctx.restore();
+      }else if(fx.type==="wallKickAir"){
+        const progress=1-fx.life/fx.maxLife;
+        ctx.save();
+        ctx.translate(fx.x-camera.x,fx.y-camera.y);
+        ctx.scale(fx.facing,1);
+        ctx.globalAlpha=.18 + .55*alpha;
+        ctx.strokeStyle="#ffffff";
+        ctx.lineCap="round";
+
+        // 足の周囲に空気が巻きつくような短い流線
+        let angle=0;
+        if(fx.dir==="up") angle=-.72;
+        else if(fx.dir==="down") angle=.62;
+        ctx.rotate(angle);
+
+        for(let i=0;i<4;i++){
+          const off=(i-1.5)*8;
+          const len=44 + i*7 + progress*22;
+          ctx.lineWidth=5-i*.45;
+          ctx.beginPath();
+          ctx.moveTo(-10,off);
+          ctx.quadraticCurveTo(18,off-10, len, off+2);
+          ctx.stroke();
+        }
+
+        ctx.globalAlpha=.15*alpha;
+        ctx.lineWidth=14;
+        ctx.beginPath();
+        ctx.moveTo(-8,0);
+        ctx.quadraticCurveTo(18,-14,58+progress*20,0);
+        ctx.stroke();
+        ctx.restore();
       }else if(fx.type==="dashClawTrail"){
         ctx.save();
         ctx.translate(fx.x-camera.x,fx.y-camera.y);
@@ -1519,14 +1805,16 @@
 
     drawCatLee();
 
-    // Goal marker
-    const gx=4010-camera.x, gy=1490-camera.y;
-    ctx.fillStyle="#f0c35a";
-    ctx.fillRect(gx,gy,8,210);
-    ctx.fillStyle="#c82d2d";
-    ctx.beginPath(); ctx.moveTo(gx+8,gy+10); ctx.lineTo(gx+110,gy+42); ctx.lineTo(gx+8,gy+78); ctx.fill();
+    // ボス arena の門
+    const gx=4140-camera.x, gy=1500-camera.y;
+    ctx.fillStyle="#5b2a25";
+    ctx.fillRect(gx,gy,22,390);
+    ctx.fillStyle="#d8ad48";
+    ctx.fillRect(gx-14,gy,50,18);
 
     ctx.restore();
+
+    drawHUD();
   }
 
   function frame(now){
