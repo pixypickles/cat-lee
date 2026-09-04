@@ -686,17 +686,28 @@
     player.parryCooldown=Math.max(0,player.parryCooldown-dt);
     player.parrySuccess=Math.max(0,player.parrySuccess-dt);
     player.backstepTimer=Math.max(0,player.backstepTimer-dt);
+
+    const prevAttackTimer=player.attackTimer;
+    const prevAttackType=player.attackType;
     player.attackTimer=Math.max(0,player.attackTimer-dt);
+    if(prevAttackTimer>0 && player.attackTimer<=0){
+      // 攻撃アニメ終了後に技名を残さない。次の入力待ち姿勢へ確実に戻す。
+      player.attackType="";
+    }
+
     player.comboWindow=Math.max(0,player.comboWindow-dt);
-    player.dashTimer=Math.max(0,player.dashTimer-dt);
     const hadDash = player.dashTimer>0;
+    player.dashTimer=Math.max(0,player.dashTimer-dt);
     player.dashCooldown=Math.max(0,player.dashCooldown-dt);
     player.invuln=Math.max(0,player.invuln-dt);
-    if(hadDash && player.dashTimer<=0 && player.grounded) player.vx*=0.35;
+    if(hadDash && player.dashTimer<=0 && player.grounded){
+      player.vx*=0.35;
+      if(Math.abs(player.vx)<70) player.vx=0;
+    }
     if(player.attackType==="dashbody" && player.attackTimer>0){
       player.vx *= Math.pow(.002,dt);
     }
-    if(player.attackType==="dashclaw" && !player.dashClawActive && player.grounded){
+    if(player.attackType==="dashclaw" && player.attackTimer>0 && !player.dashClawActive && player.grounded){
       player.vx *= Math.pow(.002,dt);
     }
     player.clawTrail=Math.max(0,player.clawTrail-dt);
@@ -745,8 +756,9 @@
         const target=input.x*maxSpeed;
         player.vx += Math.sign(target-player.vx)*Math.min(Math.abs(target-player.vx), accel*dt);
         if(Math.abs(input.x)<.05 && player.grounded){
-          player.vx *= Math.pow(.0000005,dt);
-          if(Math.abs(player.vx)<18) player.vx=0;
+          const settle = player.dashCooldown>0 ? .0000000002 : .0000005;
+          player.vx *= Math.pow(settle,dt);
+          if(Math.abs(player.vx)<28) player.vx=0;
         }
       }
       if(Math.abs(input.x)>.15) player.facing=Math.sign(input.x);
@@ -766,6 +778,15 @@
       snapToWall({side:player.wallLatchSide, platform:player.wallRef});
     } else {
       wallProbe();
+    }
+
+    // 急降下キックは着地した瞬間に技を終了。前傾ポーズを地上へ持ち越さない。
+    if(player.grounded && player.attackType==="divedown"){
+      player.attackTimer=0;
+      player.attackType="";
+      player.vy=0;
+      player.vx*=0.42;
+      if(Math.abs(player.vx)<75) player.vx=0;
     }
 
     // 地上に戻ったら壁関連状態を必ず解除。時々歩けなくなる原因の残留状態を消す。
@@ -1603,7 +1624,7 @@
     }
 
     // 歩行：攻撃していない地上移動では、膝と足先を交互に振る。
-    if(p.grounded && p.attackTimer<=0 && Math.abs(p.vx)>35 && !p.wallLatched && p.dashTimer<=0){
+    if(p.grounded && p.attackTimer<=0 && Math.abs(p.vx)>35 && Math.abs(input.x)>.08 && !p.wallLatched && p.dashTimer<=0){
       const speedRatio=Math.min(1,Math.abs(p.vx)/455);
       const walk=Math.sin(p.animTime*(12+7*speedRatio));
       const liftA=Math.max(0,-walk);
