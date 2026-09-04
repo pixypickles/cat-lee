@@ -939,7 +939,7 @@
     const hb=attackHitbox();
     if(!hb) return;
     for(const e of [...enemies,...throwers,boss]){
-      if(!e.alive || !overlap(hb,e)) continue;
+      if(!e.alive || (e===boss && !boss.active) || !overlap(hb,e)) continue;
 
       // 爪ガード中は、攻撃動作中の相手に通常爪ダメージを先に入れない。
       // 「弾いたのに同時に倒す／食らう」を防ぎ、弾きを優先する。
@@ -1476,7 +1476,7 @@
         const cy=fx.y + Math.sin(theta)*radiusY;
         const hb={x:cx-30,y:cy-30,w:60,h:60};
         for(const e of [...enemies,...throwers,boss]){
-          if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
+          if(!e.alive || (e===boss && !boss.active) || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
           e.vx=190*fx.facing;
@@ -1491,7 +1491,7 @@
         const left = fx.facing>0 ? fx.x-18 : fx.x-fx.length+18;
         const hb={x:left,y:fx.y-fx.height/2,w:fx.length,h:fx.height};
         for(const e of [...enemies,...throwers,boss]){
-          if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
+          if(!e.alive || (e===boss && !boss.active) || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
           e.vx=230*fx.facing;
@@ -1509,7 +1509,7 @@
         const cy=fx.y + Math.sin(theta)*fx.ry;
         const hb={x:cx-32,y:cy-28,w:64,h:56};
         for(const e of [...enemies,...throwers,boss]){
-          if(!e.alive || fx.hit.has(e) || !overlap(hb,e)) continue;
+          if(!e.alive || (e===boss && !boss.active) || fx.hit.has(e) || !overlap(hb,e)) continue;
           fx.hit.add(e);
           e.hp-=fx.damage;
           e.vx=210*fx.facing;
@@ -1570,7 +1570,7 @@
       if(q.ownerSafe>0) q.ownerSafe=Math.max(0,q.ownerSafe-dt);
       if(q.returned && q.ownerSafe<=0){
         for(const e of [...enemies,...throwers,boss]){
-          if(!e.alive || !overlap(q,e)) continue;
+          if(!e.alive || (e===boss && !boss.active) || !overlap(q,e)) continue;
           e.hp-=q.bullet?8:3;
           e.flash=.12;
           e.vx=(q.vx<0?-1:1)*190;
@@ -1596,7 +1596,7 @@
       const wv=sageWaves[wi];wv.life-=dt;wv.x+=wv.vx*dt;wv.y+=wv.vy*dt;
       const box={x:wv.x-wv.r,y:wv.y-wv.r*.65,w:wv.r*2,h:wv.r*1.3};
       for(const e of [...enemies,...throwers,boss]){
-        if(!e.alive||wv.hit.has(e)||!overlap(box,e))continue;
+        if(!e.alive||(e===boss&&!boss.active)||wv.hit.has(e)||!overlap(box,e))continue;
         wv.hit.add(e);e.hp-=wv.damage;e.flash=.18;
         if(e===boss){
           // 無双火力はそのまま。ただしボスを地形外へ吹き飛ばして進行不能にしない。
@@ -1665,7 +1665,11 @@
     }
 
     // 終端エリアに入るとボス戦。倒すまで arena から先へは抜けない。
-    if(boss.alive && (currentStage===10 ? player.y<650 : player.x>3550)) boss.active=true;
+    const reachedBossZone=(currentStage===10 ? player.y<650 : player.x>3550);
+    if(reachedBossZone && !boss.active){
+      boss.active=true;
+      // 旧バージョン由来などで既にHP0なら、このフレームで通常のクリア処理へ流す。
+    }
     if(boss.active && boss.alive){
       boss.flash=Math.max(0,boss.flash-dt);
       boss.hitPause=Math.max(0,(boss.hitPause||0)-dt);
