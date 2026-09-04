@@ -1045,35 +1045,107 @@
     }
     ctx.restore();
 
-    // 街の背景：登れる足場の背後に家・ビルを配置
+    // STAGE 1：古い中国の武術映画を思わせる架空の街。
     ctx.save();
-    const blocks=[
-      {x:430,y:1290,w:430,h:630},
-      {x:1030,y:1320,w:500,h:580},
-      {x:1940,y:1370,w:430,h:570},
-      {x:2760,y:1260,w:520,h:630},
-      {x:3440,y:1340,w:410,h:590}
+
+    // 遠景の山並み
+    ctx.globalAlpha=.28;
+    ctx.fillStyle="#64736c";
+    ctx.beginPath();
+    ctx.moveTo(-100-camera.x*.10,1320-camera.y*.08);
+    const mountains=[[120,1110],[310,1280],[520,1040],[760,1290],[1010,1080],[1290,1280],[1580,1010],[1870,1290],[2190,1090],[2520,1280],[2860,1030],[3210,1290],[3560,1080],[3920,1300],[4300,1110]];
+    for(const [mx,my] of mountains) ctx.lineTo(mx-camera.x*.10,my-camera.y*.08);
+    ctx.lineTo(4400-camera.x*.10,1510-camera.y*.08);
+    ctx.lineTo(-100-camera.x*.10,1510-camera.y*.08);
+    ctx.closePath();ctx.fill();
+    ctx.globalAlpha=1;
+
+    // 白壁・木組み・格子窓の家
+    const houses=[
+      {x:180,y:1390,w:430,h:500,n:2},{x:650,y:1320,w:500,h:570,n:2},
+      {x:1190,y:1260,w:430,h:630,n:3},{x:1690,y:1380,w:460,h:510,n:2},
+      {x:2200,y:1310,w:520,h:580,n:2},{x:2770,y:1240,w:470,h:650,n:3},
+      {x:3290,y:1350,w:410,h:540,n:2},{x:3740,y:1280,w:430,h:610,n:2}
     ];
-    for(const b of blocks){
-      const bx=b.x-camera.x, by=b.y-camera.y;
-      ctx.fillStyle="rgba(43,53,62,.72)";
-      ctx.fillRect(bx,by,b.w,b.h);
-      ctx.fillStyle="rgba(181,199,205,.28)";
-      for(let wx=bx+45;wx<bx+b.w-35;wx+=92){
-        for(let wy=by+70;wy<by+b.h-80;wy+=105){
-          ctx.fillRect(wx,wy,38,52);
+    for(const b of houses){
+      const bx=b.x-camera.x,by=b.y-camera.y;
+      ctx.fillStyle="#d9d0b8";ctx.fillRect(bx,by,b.w,b.h);
+      ctx.fillStyle="#563a2d";
+      ctx.fillRect(bx+18,by,16,b.h);ctx.fillRect(bx+b.w-34,by,16,b.h);
+      for(let yy=by+115;yy<by+b.h;yy+=150)ctx.fillRect(bx+15,yy,b.w-30,12);
+
+      for(let floor=0;floor<b.n;floor++){
+        const wy=by+82+floor*145;
+        for(let wx=bx+70;wx<bx+b.w-80;wx+=135){
+          ctx.fillStyle="#718b81";ctx.fillRect(wx,wy,58,65);
+          ctx.strokeStyle="#4b352b";ctx.lineWidth=5;ctx.strokeRect(wx,wy,58,65);
+          ctx.lineWidth=3;ctx.beginPath();
+          ctx.moveTo(wx+19,wy);ctx.lineTo(wx+19,wy+65);
+          ctx.moveTo(wx+39,wy);ctx.lineTo(wx+39,wy+65);
+          ctx.moveTo(wx,wy+32);ctx.lineTo(wx+58,wy+32);ctx.stroke();
         }
       }
-      // ベランダ
-      ctx.fillStyle="rgba(27,33,39,.78)";
-      ctx.fillRect(bx+55,by+245,b.w*.48,13);
-      ctx.strokeStyle="rgba(165,178,183,.55)";
-      ctx.lineWidth=4;
-      for(let xx=bx+62;xx<bx+55+b.w*.48;xx+=26){
-        ctx.beginPath();ctx.moveTo(xx,by+208);ctx.lineTo(xx,by+245);ctx.stroke();
+
+      // 反り瓦屋根
+      ctx.fillStyle="#394b48";ctx.beginPath();
+      ctx.moveTo(bx-28,by+10);
+      ctx.quadraticCurveTo(bx+18,by-15,bx+55,by-42);
+      ctx.lineTo(bx+b.w-55,by-42);
+      ctx.quadraticCurveTo(bx+b.w-18,by-15,bx+b.w+28,by+10);
+      ctx.quadraticCurveTo(bx+b.w*.78,by-2,bx+b.w*.5,by+2);
+      ctx.quadraticCurveTo(bx+b.w*.22,by-2,bx-28,by+10);ctx.fill();
+      ctx.strokeStyle="rgba(220,224,205,.25)";ctx.lineWidth=3;
+      for(let tx=bx+20;tx<bx+b.w;tx+=42){
+        ctx.beginPath();ctx.moveTo(tx,by-34);ctx.lineTo(tx-12,by+3);ctx.stroke();
       }
-      ctx.beginPath();ctx.moveTo(bx+55,by+208);ctx.lineTo(bx+55+b.w*.48,by+208);ctx.stroke();
     }
+
+    // 赤提灯
+    const lanterns=[[520,1440],[585,1440],[1080,1370],[1160,1370],[2050,1440],[2120,1440],[3160,1350],[3235,1350]];
+    for(const [lx0,ly0] of lanterns){
+      const lx=lx0-camera.x,ly=ly0-camera.y;
+      ctx.strokeStyle="#4b352b";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(lx,ly-35);ctx.lineTo(lx,ly);ctx.stroke();
+      ctx.fillStyle="#b73b31";ctx.beginPath();ctx.ellipse(lx,ly+18,14,21,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#e1b74c";ctx.fillRect(lx-10,ly-5,20,4);ctx.fillRect(lx-10,ly+39,20,4);
+    }
+
+    // 布看板
+    const signs=[[780,1450,"茶"],[1440,1390,"武"],[2390,1410,"酒"],[3440,1430,"藥"]];
+    ctx.textAlign="center";ctx.font="bold 24px serif";
+    for(const [sx0,sy0,ch] of signs){
+      const sx=sx0-camera.x,sy=sy0-camera.y;
+      ctx.fillStyle="#c7aa67";ctx.fillRect(sx-20,sy,40,82);
+      ctx.fillStyle="#4a3028";ctx.fillText(ch,sx,sy+35);
+      ctx.strokeStyle="#4a3028";ctx.lineWidth=2;ctx.strokeRect(sx-20,sy,40,82);
+    }
+    ctx.textAlign="left";
+
+    // 竹竿
+    for(const px0 of [930,1860,2620,3500]){
+      const px=px0-camera.x;
+      ctx.strokeStyle="#71854d";ctx.lineWidth=8;
+      ctx.beginPath();ctx.moveTo(px,1860-camera.y);ctx.lineTo(px,1390-camera.y);ctx.stroke();
+      ctx.lineWidth=3;
+      for(let yy=1810;yy>1410;yy-=70){ctx.beginPath();ctx.moveTo(px-5,yy-camera.y);ctx.lineTo(px+5,yy-camera.y);ctx.stroke();}
+    }
+
+    // 屋台
+    for(const [sx0,sy0] of [[350,1710],[1830,1710],[3030,1710]]){
+      const sx=sx0-camera.x,sy=sy0-camera.y;
+      ctx.fillStyle="#634334";ctx.fillRect(sx,sy,150,16);ctx.fillRect(sx+12,sy+16,9,145);ctx.fillRect(sx+128,sy+16,9,145);
+      ctx.fillStyle="#a94235";ctx.beginPath();ctx.moveTo(sx-12,sy);ctx.lineTo(sx+18,sy-55);ctx.lineTo(sx+135,sy-55);ctx.lineTo(sx+162,sy);ctx.closePath();ctx.fill();
+    }
+
+    // ボス前の武館門
+    const gateX=3580-camera.x,gateY=1410-camera.y;
+    ctx.fillStyle="#632f2b";ctx.fillRect(gateX,gateY,34,480);ctx.fillRect(gateX+430,gateY,34,480);ctx.fillRect(gateX-18,gateY,500,32);
+    ctx.fillStyle="#354946";ctx.beginPath();
+    ctx.moveTo(gateX-55,gateY+2);ctx.quadraticCurveTo(gateX+55,gateY-60,gateX+230,gateY-48);
+    ctx.quadraticCurveTo(gateX+405,gateY-60,gateX+520,gateY+2);
+    ctx.lineTo(gateX+470,gateY+22);ctx.lineTo(gateX-10,gateY+22);ctx.closePath();ctx.fill();
+    ctx.fillStyle="#d0a64d";ctx.fillRect(gateX+174,gateY+42,150,54);
+    ctx.fillStyle="#3f2b25";ctx.font="bold 26px serif";ctx.textAlign="center";ctx.fillText("武館",gateX+249,gateY+78);ctx.textAlign="left";
+
     ctx.restore();
   }
 
@@ -1713,8 +1785,20 @@
     return ["❌多すぎ！","病院のベッドで表彰される変なエンディング"];
   }
 
+  function drawStageTitle(){
+    if(player.x<700 && !boss.active && !stageCleared){
+      const fade=Math.max(0,Math.min(1,(700-player.x)/300));
+      ctx.save();ctx.globalAlpha=.78*fade;ctx.textAlign="center";ctx.fillStyle="#fff";
+      ctx.font="bold 24px serif";ctx.fillText("第一幕　古街",innerWidth/2,88);
+      ctx.font="14px sans-serif";ctx.fillText("STAGE 1",innerWidth/2,110);
+      ctx.restore();
+    }
+  }
+
   function drawHUD(){
     ctx.save();
+    drawStageTitle();
+
     // 体力
     ctx.fillStyle="rgba(0,0,0,.48)";
     roundedRect(16,16,178,28,10);ctx.fill();
