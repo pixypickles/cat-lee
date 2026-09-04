@@ -1479,7 +1479,7 @@
     const recover=pulse(.54,.96);
 
     let tx=0, ty=0, tilt=0, crouch=0;
-    let frontHand={x:31,y:-10}, backHand={x:-15,y:5};
+    let frontHand={x:39,y:-11}, backHand={x:-7,y:1};
     let frontFoot={x:30,y:49}, backFoot={x:-26,y:50};
     let frontKnee={x:24,y:27}, backKnee={x:-18,y:28};
 
@@ -1678,22 +1678,23 @@
       ctx.fillStyle="#b9a08b";
       ctx.beginPath(); ctx.ellipse(backHand.x+1,backHand.y,5.2,4.1,0,0,Math.PI*2); ctx.fill();
     }else{
-      limb(-14,-7,-19,2,-10,7,9.5,"#b9a08b");
+      // 奥腕も背中側へ張り出させず、胸の前へ畳んだシルエットにする。
+      limb(-10,-8,-7,-1,2,2,9.5,"#b9a08b");
       ctx.fillStyle="#b9a08b";
-      ctx.beginPath(); ctx.ellipse(-8,7,7,6,.2,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(4,1,6.5,5.5,.15,0,Math.PI*2); ctx.fill();
     }
 
-    // カンフー上着：立ち襟・前合わせ・裾広がり・盤扣（飾り紐）
+    // カンフー上着：背中側をほぼ直線にし、腹だけが膨らんで見えない細身の横姿へ。
     ctx.fillStyle="#2566d8";
     ctx.beginPath();
-    ctx.moveTo(-27,-24);
-    ctx.quadraticCurveTo(-35,-14,-32,2);
-    ctx.lineTo(-30,29);
-    ctx.lineTo(30,29);
+    ctx.moveTo(-23,-24);
+    ctx.quadraticCurveTo(-27,-12,-26,2);
+    ctx.lineTo(-25,28);
+    ctx.lineTo(29,28);
     ctx.lineTo(28,-4);
-    ctx.quadraticCurveTo(27,-17,18,-24);
+    ctx.quadraticCurveTo(27,-16,18,-24);
     ctx.lineTo(8,-27);
-    ctx.lineTo(-18,-27);
+    ctx.lineTo(-17,-27);
     ctx.closePath();
     ctx.fill();
 
@@ -1707,29 +1708,33 @@
     ctx.closePath();
     ctx.fill();
 
-    // 前合わせと裾
+    // 前合わせ：襟元から斜めに前へ落ち、その後だけ縦へ。
+    // ファスナーのような中央線ではなく、伝統的な右前の合わせに見せる。
     ctx.strokeStyle="#f1c64c";
-    ctx.lineWidth=4.5;
+    ctx.lineWidth=4.2;
     ctx.lineCap="round";
+    ctx.lineJoin="round";
     ctx.beginPath();
-    ctx.moveTo(5,-23);
-    ctx.quadraticCurveTo(12,-15,9,-4);
-    ctx.lineTo(10,25);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-27,25);
-    ctx.lineTo(29,25);
+    ctx.moveTo(4,-23);
+    ctx.quadraticCurveTo(12,-20,17,-13);
+    ctx.lineTo(20,23);
     ctx.stroke();
 
-    // 盤扣：横向きの飾り紐を3本
-    ctx.lineWidth=3.8;
-    for(const yy of [-14,-3,8]){
+    // 裾の縁取り
+    ctx.beginPath();
+    ctx.moveTo(-24,24);
+    ctx.lineTo(29,24);
+    ctx.stroke();
+
+    // 盤扣：合わせ線から胸側へ短く伸びる3本。輪と留め玉を分けて描く。
+    ctx.lineWidth=3.4;
+    for(const [yy,xx] of [[-13,17],[-3,18],[8,19]]){
       ctx.beginPath();
-      ctx.moveTo(9,yy);
-      ctx.lineTo(22,yy-2);
+      ctx.moveTo(xx,yy);
+      ctx.lineTo(8,yy-1);
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(24,yy-2,2.5,0,Math.PI*2);
+      ctx.arc(6,yy-1,3.1,0,Math.PI*2);
       ctx.stroke();
     }
 
@@ -1740,9 +1745,9 @@
       ctx.fillStyle="#b9a08b";
       ctx.beginPath(); ctx.ellipse(frontHand.x+1,frontHand.y,5.8,4.4,0,0,Math.PI*2); ctx.fill();
     }else{
-      const elbow={x:(18+frontHand.x)/2+4,y:(-9+frontHand.y)/2+2};
-      limb(18,-9,elbow.x,elbow.y,frontHand.x-3,frontHand.y,10.5,"#b9a08b");
-      // 握り拳：丸すぎず、胸前にコンパクトに構える
+      // 前腕は胸に貼り付けず、顔の前へ一段出した構え。
+      const elbow={x:(20+frontHand.x)/2+5,y:(-8+frontHand.y)/2+4};
+      limb(20,-8,elbow.x,elbow.y,frontHand.x-3,frontHand.y,10.5,"#b9a08b");
       ctx.fillStyle="#b9a08b";
       ctx.beginPath();
       ctx.ellipse(frontHand.x,frontHand.y,8,7,-.25,0,Math.PI*2);
