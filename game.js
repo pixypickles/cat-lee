@@ -40,11 +40,11 @@
   }
 
   const enemies = [
-    {x:680,y:1820,w:64,h:82,hp:3,vx:0,flash:0,alive:true,type:"dog"},
-    {x:1320,y:1800,w:64,h:82,hp:3,vx:0,flash:0,alive:true,type:"rabbit"},
-    {x:1880,y:1860,w:64,h:82,hp:4,vx:0,flash:0,alive:true,type:"fox"},
-    {x:2700,y:1810,w:64,h:82,hp:4,vx:0,flash:0,alive:true,type:"boar"},
-    {x:3420,y:1850,w:64,h:82,hp:5,vx:0,flash:0,alive:true,type:"dog"}
+    {x:680,y:1806,w:72,h:96,hp:3,vx:0,flash:0,alive:true,type:"dog"},
+    {x:1320,y:1786,w:72,h:96,hp:3,vx:0,flash:0,alive:true,type:"rabbit"},
+    {x:1880,y:1846,w:72,h:96,hp:4,vx:0,flash:0,alive:true,type:"fox"},
+    {x:2700,y:1796,w:72,h:96,hp:4,vx:0,flash:0,alive:true,type:"boar"},
+    {x:3420,y:1836,w:72,h:96,hp:5,vx:0,flash:0,alive:true,type:"dog"}
   ];
   const input = {
     x:0, y:0,
@@ -101,8 +101,8 @@
 
   // 高所からツボを投げる敵。地上ルートから見え、登って倒せる。
   const throwers = [
-    {x:1260,y:1476,w:56,h:76,hp:3,alive:true,facing:-1,throwTimer:1.2,flash:0},
-    {x:2980,y:1456,w:56,h:76,hp:3,alive:true,facing:-1,throwTimer:2.0,flash:0}
+    {x:1260,y:1460,w:68,h:92,hp:3,alive:true,facing:-1,throwTimer:1.2,flash:0},
+    {x:2980,y:1440,w:68,h:92,hp:3,alive:true,facing:-1,throwTimer:2.0,flash:0}
   ];
   const pots = [];
 
@@ -353,6 +353,7 @@
       case "upper": hb={x:p.x+10,y:p.y-32,w:p.w-20,h:64,damage:2,kx:100*f,ky:-650}; break;
       case "somersault": hb={x:f>0?p.x-12:p.x+player.w-48,y:p.y+4,w:60,h:72,damage:2,kx:-420*f,ky:-400}; break;
       case "airkick": hb={x:f>0?p.x+p.w-4:p.x-52,y:p.y+22,w:56,h:42,damage:2,kx:320*f,ky:-110}; break;
+      case "divedown": hb={x:f>0?p.x+p.w-5:p.x-70,y:p.y+38,w:74,h:66,damage:4,kx:560*f,ky:520}; break;
       case "dashbody": hb={x:f>0?p.x+p.w-2:p.x-64,y:p.y+42,w:68,h:34,damage:3,kx:620*f,ky:-120}; break;
       case "dashupper": hb={x:f>0?p.x+p.w-8:p.x-58,y:p.y-12,w:66,h:88,damage:4,kx:300*f,ky:-720}; break;
       case "dashclaw": hb={x:f>0?p.x+p.w-8:p.x-98,y:p.y+2,w:106,h:p.h-4,damage:4,kx:760*f,ky:-80}; break;
@@ -439,6 +440,19 @@
     }
 
     if(!player.grounded){
+      // 空中で下＋攻撃：斜め下へ一気に踏み込む急降下キック。
+      // 壁つかまりからの下キックと同じ「足に風をまとう」感触。
+      if(input.y > .35){
+        startAttack("divedown",.34);
+        player.vx = 650*player.facing;
+        player.vy = 900;
+        spawnAttackFX({
+          type:"wallKickAir", dir:"down",
+          x:player.x+player.w/2, y:player.y+player.h*.62,
+          facing:player.facing, life:.26,maxLife:.26
+        });
+        return;
+      }
       player.airKickSide = 1-player.airKickSide;
       player.airKickCount++;
       startAttack("airkick",.27);
@@ -1205,7 +1219,7 @@
     const x=e.x-camera.x,y=e.y-camera.y;
     ctx.save();
     ctx.translate(x+e.w/2,y+e.h/2);
-    ctx.scale(e.facing,1);
+    ctx.scale(e.facing*1.12,1.12);
     if(e.flash>0) ctx.globalAlpha=.45;
 
     // 横向きの猫科風の投擲敵
@@ -1307,7 +1321,7 @@
 
     ctx.save();
     ctx.translate(x+e.w/2,y+e.h/2);
-    ctx.scale(e.facing,1);
+    ctx.scale(e.facing*1.10,1.10);
     if(e.flash>0) ctx.globalAlpha=.45;
 
     const colors={dog:"#b87954",rabbit:"#c9c0bb",fox:"#d87645",boar:"#8f6d63"};
@@ -1417,7 +1431,7 @@
 
     const durations={
       jab:.26, straight:.29, kickup:.42, somersault:.44,
-      airkick:.30, dashbody:.30, dashupper:.34, dashclaw:.30, clawstrike:.30,
+      airkick:.30, divedown:.34, dashbody:.30, dashupper:.34, dashclaw:.30, clawstrike:.30,
       wallup:.34, wallside:.32, walldown:.34
     };
     const dur=durations[type]||.3;
@@ -1536,6 +1550,14 @@
       frontKnee={x:31+10*chamber,y:24+5*chamber};
       frontFoot={x:37+17*chamber+40*hit,y:43+16*chamber+28*hit-12*recover};
       backFoot={x:-27,y:27}; tx=8*hit; ty=4*hit;
+    }else if(type==="divedown"){
+      const chamber=Math.max(wind,recover*.55);
+      tilt=.18+.12*hit;
+      tx=8*hit; ty=7*hit;
+      frontKnee={x:29+8*chamber,y:22+7*chamber};
+      frontFoot={x:40+16*chamber+43*hit,y:42+14*chamber+34*hit-8*recover};
+      backKnee={x:-12,y:25}; backFoot={x:-27,y:30};
+      frontHand={x:20,y:-8}; backHand={x:-20,y:0};
     }
 
     // ダッシュ中は背を低くして前傾。通常走りとは明確にシルエットを変える。
