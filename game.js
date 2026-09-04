@@ -496,6 +496,79 @@
     player.hp=player.maxHp; camera.x=0; camera.y=0;
   }
 
+  
+  function loadStage7(){
+    currentStage=7;stageCleared=false;clearTimer=0;
+    const ps=[
+      {x:0,y:1920,w:650,h:280},{x:650,y:1810,w:560,h:390},{x:1210,y:1690,w:560,h:510},
+      {x:1770,y:1570,w:560,h:630},{x:2330,y:1450,w:560,h:750},{x:2890,y:1320,w:560,h:880},{x:3450,y:1090,w:750,h:1110},
+      {x:410,y:1690,w:260,h:40},{x:820,y:1570,w:290,h:40},{x:1370,y:1450,w:300,h:40},
+      {x:1920,y:1330,w:310,h:40},{x:2470,y:1210,w:310,h:40},{x:3010,y:1080,w:300,h:40},{x:3500,y:930,w:330,h:40},
+      {x:720,y:1370,w:60,h:440},{x:1510,y:1240,w:60,h:450},{x:2290,y:1110,w:60,h:460},{x:2860,y:930,w:60,h:390},{x:3380,y:790,w:60,h:530}
+    ];
+    platforms.splice(0,platforms.length,...ps);configurePlatforms();
+    backgroundWallJumpSurfaces.splice(0,backgroundWallJumpSurfaces.length,
+      {x:560,y:1380,h:430},{x:760,y:1330,h:480},{x:1120,y:1250,h:440},{x:1510,y:1160,h:530},
+      {x:1710,y:1120,h:450},{x:2260,y:1000,h:570},{x:2320,y:940,h:510},{x:2860,y:820,h:500},
+      {x:2890,y:800,h:520},{x:3420,y:680,h:640},{x:3450,y:620,h:470},{x:4160,y:620,h:470});
+    enemies.splice(0,enemies.length,
+      {x:520,y:1816,w:72,h:96,hp:9,vx:0,flash:0,alive:true,type:"rabbit"},
+      {x:1030,y:1714,w:72,h:96,hp:9,vx:0,flash:0,alive:true,type:"fox"},
+      {x:1570,y:1594,w:72,h:96,hp:10,vx:0,flash:0,alive:true,type:"dog"},
+      {x:2140,y:1474,w:72,h:96,hp:10,vx:0,flash:0,alive:true,type:"boar"},
+      {x:2710,y:1354,w:72,h:96,hp:11,vx:0,flash:0,alive:true,type:"rabbit"},
+      {x:3220,y:1224,w:72,h:96,hp:11,vx:0,flash:0,alive:true,type:"fox"});
+    for(const e of enemies)initEnemyState(e);
+    throwers.splice(0,throwers.length,
+      {x:1430,y:1358,w:68,h:92,hp:9,alive:true,facing:-1,throwTimer:.82,flash:0},
+      {x:3060,y:988,w:68,h:92,hp:9,alive:true,facing:-1,throwTimer:1.25,flash:0});
+    pots.length=0;attackFX.length=0;
+    Object.assign(boss,{x:3910,y:968,baseY:968,w:110,h:122,hp:92,maxHp:92,vx:0,vy:0,facing:-1,
+      flash:0,alive:true,active:false,attackTimer:0,attackCooldown:.68,attackHitDone:false,
+      walkPhase:0,hitPause:0,jumping:false,jumpCooldown:1.1,weaponMode:"spear",weaponSerial:0});
+    Object.assign(player,{x:180,y:1788,vx:0,vy:0,facing:1,grounded:false,onWall:0,wallLatched:false,
+      wallLatchSide:0,wallRef:null,wallJumpUsed:false,dashTimer:0,dashCooldown:0,attackTimer:0,
+      attackType:"",comboStep:0,comboWindow:0,invuln:1,respawnTimer:0,respawnX:180,respawnY:1788});
+    player.hp=player.maxHp;camera.x=0;camera.y=0;
+  }
+
+  
+  function loadStage8(){
+    currentStage=8;stageCleared=false;clearTimer=0;
+    const ps=[
+      {x:0,y:1920,w:820,h:280},{x:820,y:1900,w:760,h:300},{x:1580,y:1935,w:780,h:265},
+      {x:2360,y:1895,w:800,h:305},{x:3160,y:1920,w:1040,h:280},
+      {x:390,y:1640,w:330,h:40},{x:980,y:1510,w:370,h:40},{x:1660,y:1620,w:340,h:40},
+      {x:2200,y:1480,w:390,h:40},{x:2790,y:1570,w:350,h:40},{x:3400,y:1430,w:390,h:40},
+      {x:760,y:1360,w:60,h:540},{x:1470,y:1300,w:60,h:635},{x:2680,y:1260,w:60,h:635},{x:3320,y:1210,w:60,h:710}
+    ];
+    platforms.splice(0,platforms.length,...ps);configurePlatforms();
+    backgroundWallJumpSurfaces.splice(0,backgroundWallJumpSurfaces.length,
+      {x:90,y:1190,h:710},{x:720,y:1190,h:710},{x:850,y:1080,h:820},{x:1450,y:1080,h:820},
+      {x:1570,y:1210,h:690},{x:2140,y:1210,h:690},{x:2180,y:1020,h:880},{x:2670,y:1020,h:880},
+      {x:2760,y:1120,h:780},{x:3300,y:1120,h:780},{x:3370,y:900,h:1000},{x:4160,y:900,h:1000});
+    enemies.splice(0,enemies.length,
+      {x:560,y:1806,w:72,h:96,hp:10,vx:0,flash:0,alive:true,type:"dog"},
+      {x:1160,y:1806,w:72,h:96,hp:10,vx:0,flash:0,alive:true,type:"fox"},
+      {x:1860,y:1841,w:72,h:96,hp:11,vx:0,flash:0,alive:true,type:"boar"},
+      {x:2520,y:1801,w:72,h:96,hp:11,vx:0,flash:0,alive:true,type:"rabbit"},
+      {x:3200,y:1826,w:72,h:96,hp:12,vx:0,flash:0,alive:true,type:"dog"});
+    for(const e of enemies)initEnemyState(e);
+    throwers.splice(0,throwers.length,
+      {x:1080,y:1418,w:68,h:92,hp:10,alive:true,facing:-1,throwTimer:.8,flash:0},
+      {x:2870,y:1478,w:68,h:92,hp:10,alive:true,facing:-1,throwTimer:1.2,flash:0});
+    pots.length=0;attackFX.length=0;
+    Object.assign(boss,{
+      x:3910,y:1798,baseY:1798,w:108,h:122,hp:100,maxHp:100,vx:0,vy:0,facing:-1,
+      flash:0,alive:true,active:false,attackTimer:0,attackCooldown:.65,attackHitDone:false,
+      walkPhase:0,hitPause:0,jumping:false,jumpCooldown:1.0,weaponMode:"baton",weaponSerial:0
+    });
+    Object.assign(player,{x:180,y:1788,vx:0,vy:0,facing:1,grounded:false,onWall:0,wallLatched:false,
+      wallLatchSide:0,wallRef:null,wallJumpUsed:false,dashTimer:0,dashCooldown:0,attackTimer:0,
+      attackType:"",comboStep:0,comboWindow:0,invuln:1,respawnTimer:0,respawnX:180,respawnY:1788});
+    player.hp=player.maxHp;camera.x=0;camera.y=0;
+  }
+
   // 攻撃エフェクト兼ヒット判定。短時間だけ残る。
   const attackFX = [];
   function spawnAttackFX(fx){
@@ -1082,6 +1155,16 @@
         loadStage6();
         return;
       }
+      if(currentStage===6 && clearTimer>.65 && continuePressed){
+        input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
+        loadStage7();
+        return;
+      }
+      if(currentStage===7 && clearTimer>.65 && continuePressed){
+        input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
+        loadStage8();
+        return;
+      }
       input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
       return;
     }
@@ -1431,7 +1514,72 @@
       boss.facing=dx<0?-1:1;
       const dist=Math.abs(dx);
 
-      if(currentStage===6){
+      if(currentStage===8){
+        // 現代街のボス：警棒の連撃＋跳び膝。銃はまだラスボスまで温存。
+        if(boss.jumping){
+          boss.vy+=1950*dt;boss.x+=boss.vx*dt;boss.y+=boss.vy*dt;
+          if(!boss.attackHitDone && boss.vy>0 && overlap({x:boss.x+8,y:boss.y+12,w:boss.w-16,h:boss.h-8},player)){
+            boss.attackHitDone=true;
+            if(player.parryTimer>0){triggerParry(player.x+player.w/2,player.y+player.h*.45);player.parryTimer=0;boss.vx=-boss.facing*280;boss.vy=-320;}
+            else hurtPlayer(4,700*boss.facing,-420);
+          }
+          if(boss.y>=boss.baseY){boss.y=boss.baseY;boss.vy=0;boss.vx=0;boss.jumping=false;boss.jumpCooldown=1.0;boss.attackCooldown=.35;}
+        }else if(boss.hitPause>0){
+          boss.vx*=Math.pow(.08,dt);boss.x+=boss.vx*dt;
+        }else if(boss.attackTimer>0){
+          const elapsed=.66-boss.attackTimer;boss.vx=0;
+          if(!boss.attackHitDone && elapsed>.24){
+            boss.attackHitDone=true;
+            const hb={x:boss.facing>0?boss.x+boss.w-18:boss.x-96,y:boss.y+20,w:114,h:70};
+            if(overlap(hb,player)){
+              if(player.parryTimer>0){triggerParry(player.x+player.w/2,player.y+player.h*.45);player.parryTimer=0;boss.attackTimer=0;boss.attackCooldown=1.0;boss.vx=-boss.facing*300;}
+              else hurtPlayer(4,690*boss.facing,-270);
+            }
+          }
+        }else if(boss.jumpCooldown<=0 && dist>210 && dist<480){
+          boss.jumping=true;boss.vy=-760;boss.vx=boss.facing*(300+Math.min(80,dist*.12));boss.attackHitDone=false;boss.jumpCooldown=1.35;
+        }else if(dist<175 && boss.attackCooldown<=0){
+          boss.attackTimer=.66;boss.attackCooldown=.68+Math.random()*.22;boss.attackHitDone=false;boss.weaponSerial=(boss.weaponSerial||0)+1;
+        }else if(dist<800 && dist>145){
+          boss.vx=boss.facing*185;boss.x+=boss.vx*dt;
+        }else boss.vx=0;
+        boss.x=Math.max(3650,Math.min(4090-boss.w,boss.x));
+        if(!boss.jumping)boss.y=boss.baseY;
+      }else if(currentStage===7){
+        // 槍ボス：長い突き、低い足払い、後方ジャンプで間合い管理。
+        if(boss.jumping){
+          boss.vy+=1900*dt;boss.x+=boss.vx*dt;boss.y+=boss.vy*dt;
+          if(boss.y>=boss.baseY){boss.y=boss.baseY;boss.vy=0;boss.vx=0;boss.jumping=false;boss.jumpCooldown=1.0;boss.attackCooldown=.35;}
+        }else if(boss.hitPause>0){
+          boss.vx*=Math.pow(.08,dt);boss.x+=boss.vx*dt;
+        }else if(boss.attackTimer>0){
+          const elapsed=.76-boss.attackTimer;boss.vx=0;
+          if(!boss.attackHitDone && elapsed>.29){
+            boss.attackHitDone=true;
+            const sweep=boss.weaponMode==="spearSweep";
+            const hb=sweep
+              ? {x:boss.facing>0?boss.x+boss.w-22:boss.x-188,y:boss.y+62,w:210,h:42}
+              : {x:boss.facing>0?boss.x+boss.w-16:boss.x-215,y:boss.y+26,w:231,h:40};
+            if(overlap(hb,player)){
+              if(player.parryTimer>0){
+                triggerParry(player.x+player.w/2,player.y+player.h*(sweep?.72:.42));player.parryTimer=0;
+                boss.attackTimer=0;boss.attackCooldown=1.05;boss.vx=-boss.facing*300;
+              }else hurtPlayer(sweep?4:4,760*boss.facing,sweep?-520:-220);
+            }
+          }
+        }else if(dist<120 && boss.jumpCooldown<=0){
+          // 近すぎると一度離れて槍の間合いへ。
+          boss.jumping=true;boss.vy=-620;boss.vx=-boss.facing*330;boss.jumpCooldown=1.3;
+        }else if(dist<285 && boss.attackCooldown<=0){
+          boss.weaponSerial=(boss.weaponSerial||0)+1;
+          boss.weaponMode=(boss.weaponSerial%3===0)?"spearSweep":"spear";
+          boss.attackTimer=.76;boss.attackCooldown=.78+Math.random()*.28;boss.attackHitDone=false;
+        }else if(dist<820 && dist>235){
+          boss.vx=boss.facing*150;boss.x+=boss.vx*dt;
+        }else boss.vx=0;
+        boss.x=Math.max(3650,Math.min(4090-boss.w,boss.x));
+        if(!boss.jumping)boss.y=boss.baseY;
+      }else if(currentStage===6){
         // 鎖分銅ボス：遠距離の横振りと、時々跳び込み攻撃。
         if(boss.jumping){
           boss.vy+=1950*dt; boss.x+=boss.vx*dt; boss.y+=boss.vy*dt;
@@ -1670,6 +1818,108 @@
     ctx.arcTo(x,y+h,x,y,rr);
     ctx.arcTo(x,y,x+w,y,rr);
     ctx.closePath();
+  }
+
+  function drawStage8Background(){
+    const w=innerWidth,h=innerHeight;
+    const g=ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,"#11152b");g.addColorStop(.58,"#29244a");g.addColorStop(1,"#503544");
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);ctx.save();
+
+    // 現代の高層ビル群
+    const towers=[[-100,520,360,1380],[300,700,310,1200],[670,430,420,1470],[1160,620,350,1280],
+      [1560,360,450,1540],[2070,650,330,1250],[2460,470,410,1430],[2940,580,350,1320],[3350,300,650,1600]];
+    for(const [x0,y0,bw,bh] of towers){
+      const x=x0-camera.x*.35,y=y0-camera.y*.08;
+      ctx.fillStyle="#20283a";ctx.fillRect(x,y,bw,bh);
+      for(let yy=y+55;yy<y+bh;yy+=72)for(let xx=x+35;xx<x+bw-25;xx+=65){
+        ctx.fillStyle=((Math.floor((xx+yy)/60)%4)===0)?"rgba(255,215,120,.7)":"rgba(95,143,174,.28)";
+        ctx.fillRect(xx,yy,28,34);
+      }
+    }
+
+    // ネオンと看板
+    const signs=[[220,1160,"NIGHT"],[930,1040,"CAT CAFE"],[1690,1110,"ARCADE"],[2320,990,"HOTEL"],
+      [2880,1080,"CLUB"],[3480,880,"龍 CITY"]];
+    for(const [sx0,sy0,label] of signs){
+      const x=sx0-camera.x,y=sy0-camera.y;
+      ctx.fillStyle="rgba(18,18,28,.88)";ctx.fillRect(x,y,150,62);
+      ctx.strokeStyle="#e6b4d7";ctx.lineWidth=4;ctx.strokeRect(x,y,150,62);
+      ctx.fillStyle="#f4d8e8";ctx.font="bold 18px sans-serif";ctx.textAlign="center";ctx.fillText(label,x+75,y+39);ctx.textAlign="left";
+    }
+
+    // 高架道路・街灯・横断歩道
+    ctx.fillStyle="#343944";ctx.fillRect(-camera.x*.55,1450-camera.y*.1,w+500,38);
+    for(let x0=150;x0<4300;x0+=520){
+      const x=x0-camera.x,y=1840-camera.y;
+      ctx.strokeStyle="#4d5560";ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(x,y+50);ctx.lineTo(x,y-190);ctx.quadraticCurveTo(x,y-235,x+55,y-235);ctx.stroke();
+      ctx.fillStyle="#f0d995";ctx.beginPath();ctx.ellipse(x+62,y-235,24,10,0,0,Math.PI*2);ctx.fill();
+    }
+    for(let x0=300;x0<4000;x0+=900){
+      const x=x0-camera.x,y=1892-camera.y;ctx.fillStyle="rgba(235,235,230,.55)";
+      for(let i=0;i<6;i++)ctx.fillRect(x+i*44,y,28,10);
+    }
+
+    // ボス前の現代ビル入口
+    const gx=3560-camera.x,gy=1190-camera.y;
+    ctx.fillStyle="#171d28";ctx.fillRect(gx,gy,520,710);
+    ctx.fillStyle="#39485a";ctx.fillRect(gx+100,gy+230,320,480);
+    ctx.strokeStyle="#91a7b7";ctx.lineWidth=6;ctx.strokeRect(gx+100,gy+230,320,480);
+    ctx.fillStyle="#d7c477";ctx.font="bold 26px sans-serif";ctx.textAlign="center";ctx.fillText("LEE TOWER",gx+260,gy+180);ctx.textAlign="left";
+    ctx.restore();
+  }
+
+  function drawStage7Background(){
+    const w=innerWidth,h=innerHeight;
+    const g=ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,"#efbd82");g.addColorStop(.36,"#c98268");g.addColorStop(.72,"#596c68");g.addColorStop(1,"#354940");
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);ctx.save();
+
+    const valleyShift=camera.y*.10;
+    for(let layer=0;layer<3;layer++){
+      ctx.fillStyle=layer===0?"rgba(82,91,86,.25)":layer===1?"rgba(56,75,68,.40)":"rgba(40,65,55,.55)";
+      ctx.beginPath();ctx.moveTo(0,h);
+      for(let x=-240;x<w+300;x+=280){
+        const yy=720+layer*175+valleyShift+Math.sin((x+camera.x*.08)/240)*80;
+        ctx.lineTo(x,yy);ctx.lineTo(x+140,yy-170+layer*20);ctx.lineTo(x+280,yy);
+      }
+      ctx.lineTo(w,h);ctx.closePath();ctx.fill();
+    }
+
+    ctx.fillStyle="#394f43";ctx.beginPath();
+    ctx.moveTo(-200-camera.x,1980-camera.y);ctx.lineTo(500-camera.x,1840-camera.y);ctx.lineTo(1100-camera.x,1710-camera.y);
+    ctx.lineTo(1700-camera.x,1580-camera.y);ctx.lineTo(2300-camera.x,1450-camera.y);ctx.lineTo(2900-camera.x,1320-camera.y);
+    ctx.lineTo(3500-camera.x,1090-camera.y);ctx.lineTo(4400-camera.x,980-camera.y);ctx.lineTo(4400-camera.x,2300-camera.y);
+    ctx.lineTo(-200-camera.x,2300-camera.y);ctx.closePath();ctx.fill();
+
+    const temples=[{x:180,y:1470,w:470,h:430},{x:900,y:1330,w:470,h:470},{x:1660,y:1190,w:470,h:500},
+      {x:2380,y:1040,w:470,h:520},{x:3020,y:850,w:430,h:470}];
+    for(const b of temples){
+      const x=b.x-camera.x,y=b.y-camera.y;
+      ctx.fillStyle="#d8c7a5";ctx.fillRect(x,y,b.w,b.h);ctx.strokeStyle="#6a392e";ctx.lineWidth=11;
+      for(let xx=x+42;xx<x+b.w;xx+=110){ctx.beginPath();ctx.moveTo(xx,y);ctx.lineTo(xx,y+b.h);ctx.stroke();}
+      ctx.fillStyle="#303f3d";ctx.beginPath();ctx.moveTo(x-42,y+15);ctx.quadraticCurveTo(x+b.w/2,y-80,x+b.w+42,y+15);
+      ctx.quadraticCurveTo(x+b.w/2,y-24,x-42,y+15);ctx.fill();
+    }
+
+    ctx.fillStyle="#8b8679";
+    for(let i=0;i<18;i++){const wx=250+i*190,wy=1810-i*43;ctx.fillRect(wx-camera.x,wy-camera.y,150,18);}
+
+    for(const [x0,y0] of [[430,1710],[1110,1550],[1810,1400],[2520,1250],[3150,1080]]){
+      const x=x0-camera.x,y=y0-camera.y;ctx.fillStyle="#77736a";ctx.fillRect(x,y,20,100);ctx.fillRect(x-17,y+10,54,14);
+      ctx.fillRect(x-9,y-20,38,31);ctx.fillStyle="#f2c66d";ctx.fillRect(x,y-11,20,16);
+    }
+    for(const [x0,y0] of [[700,1570],[1490,1420],[2260,1260],[2860,1080],[3370,880]]){
+      const x=x0-camera.x,y=y0-camera.y;ctx.strokeStyle="#493c2f";ctx.lineWidth=17;ctx.beginPath();
+      ctx.moveTo(x,y+250);ctx.quadraticCurveTo(x-35,y+80,x+8,y-90);ctx.stroke();ctx.fillStyle="#29493b";
+      for(const [dx,dy] of [[-55,0],[25,-45],[-20,-90]]){ctx.beginPath();ctx.ellipse(x+dx,y+dy,82,34,-.2,0,Math.PI*2);ctx.fill();}
+    }
+
+    const gx=3560-camera.x,gy=560-camera.y;ctx.fillStyle="#4b2927";ctx.fillRect(gx,gy,510,530);
+    ctx.fillStyle="#263a37";ctx.beginPath();ctx.moveTo(gx-60,gy+22);ctx.quadraticCurveTo(gx+255,gy-105,gx+570,gy+22);
+    ctx.lineTo(gx+520,gy+48);ctx.lineTo(gx-10,gy+48);ctx.closePath();ctx.fill();
+    ctx.fillStyle="#b82f2f";ctx.fillRect(gx+120,gy+72,270,66);ctx.fillStyle="#efd278";ctx.font="bold 28px serif";
+    ctx.textAlign="center";ctx.fillText("天山寺",gx+255,gy+114);ctx.textAlign="left";ctx.restore();
   }
 
   function drawStage6Background(){
@@ -2159,6 +2409,8 @@
   }
 
   function drawBackground(){
+    if(currentStage===8){drawStage8Background();return;}
+    if(currentStage===7){drawStage7Background();return;}
     if(currentStage===6){drawStage6Background();return;}
     if(currentStage===5){
       drawStage5Background();
@@ -2304,6 +2556,29 @@
   function drawPlatform(p){
     const x=p.x-camera.x, y=p.y-camera.y;
 
+    if(currentStage===8){
+      if(p.climbThrough){
+        // 非常階段の縦梯子／排水管
+        const cx=x+p.w/2;ctx.save();ctx.strokeStyle="#46515e";ctx.lineWidth=8;
+        ctx.beginPath();ctx.moveTo(cx-13,y);ctx.lineTo(cx-13,y+p.h);ctx.moveTo(cx+13,y);ctx.lineTo(cx+13,y+p.h);ctx.stroke();
+        ctx.lineWidth=4;for(let yy=y+25;yy<y+p.h;yy+=34){ctx.beginPath();ctx.moveTo(cx-13,yy);ctx.lineTo(cx+13,yy);ctx.stroke();}
+        ctx.restore();return;
+      }
+      if(p.oneWay){ctx.fillStyle="#3d4652";ctx.fillRect(x,y,p.w,p.h);ctx.fillStyle="#87909a";ctx.fillRect(x,y,p.w,8);return;}
+      ctx.fillStyle="#353a43";roundedRect(x,y,p.w,p.h,4);ctx.fill();ctx.fillStyle="#707985";ctx.fillRect(x,y,p.w,12);return;
+    }
+    if(currentStage===7){
+      if(p.climbThrough){
+        // 山寺では松・木柱を掴んで登れる。
+        const cx=x+p.w/2;ctx.save();ctx.strokeStyle="#5b4634";ctx.lineWidth=19;ctx.lineCap="round";
+        ctx.beginPath();ctx.moveTo(cx,y);ctx.lineTo(cx,y+p.h);ctx.stroke();
+        ctx.strokeStyle="#7c684e";ctx.lineWidth=3;
+        for(let yy=y+45;yy<y+p.h;yy+=58){ctx.beginPath();ctx.moveTo(cx-10,yy);ctx.lineTo(cx+10,yy);ctx.stroke();}
+        ctx.restore();return;
+      }
+      if(p.oneWay){ctx.fillStyle="#5c4a3a";ctx.fillRect(x,y,p.w,p.h);ctx.fillStyle="#303f3d";ctx.fillRect(x,y,p.w,9);return;}
+      ctx.fillStyle="#77736a";roundedRect(x,y,p.w,p.h,4);ctx.fill();ctx.fillStyle="#a59a82";ctx.fillRect(x,y,p.w,12);return;
+    }
     if(currentStage===6){
       if(p.climbThrough){
         const cx=x+p.w/2;ctx.save();ctx.strokeStyle="#35444b";ctx.lineWidth=17;ctx.lineCap="square";
@@ -2577,7 +2852,52 @@
     ctx.scale(e.facing,1);
     if(e.flash>0) ctx.globalAlpha=.48;
 
-    if(currentStage===6){
+    if(currentStage===8){
+      // 黒豹の現代用心棒。スーツ＋伸縮警棒。
+      ctx.strokeStyle="#20232b";ctx.lineWidth=18;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(-22,35);ctx.lineTo(-28,59);ctx.stroke();ctx.beginPath();ctx.moveTo(22,35);ctx.lineTo(29,59);ctx.stroke();
+      ctx.fillStyle="#252936";roundedRect(-39,-5,78,59,10);ctx.fill();
+      ctx.fillStyle="#dedede";ctx.beginPath();ctx.moveTo(-8,-3);ctx.lineTo(0,30);ctx.lineTo(9,-3);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#7b2530";ctx.beginPath();ctx.moveTo(-4,1);ctx.lineTo(4,1);ctx.lineTo(7,24);ctx.lineTo(0,31);ctx.lineTo(-7,24);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#29282d";ctx.beginPath();ctx.ellipse(2,-41,36,31,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.moveTo(-24,-59);ctx.lineTo(-17,-79);ctx.lineTo(-5,-61);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(18,-60);ctx.lineTo(27,-78);ctx.lineTo(34,-57);ctx.closePath();ctx.fill();
+      ctx.fillStyle="#b9a18f";ctx.beginPath();ctx.ellipse(26,-31,18,12,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#f0c76a";ctx.beginPath();ctx.arc(14,-46,4,0,Math.PI*2);ctx.fill();
+
+      const t=e.attackTimer>0?Math.max(0,Math.min(1,(.66-e.attackTimer)/.66)):0;
+      const swing=e.attackTimer>0?Math.sin(t*Math.PI):0;
+      ctx.strokeStyle="#29282d";ctx.lineWidth=14;ctx.beginPath();ctx.moveTo(23,3);ctx.lineTo(41-swing*4,13);ctx.lineTo(50+swing*18,22-swing*20);ctx.stroke();
+      ctx.save();ctx.translate(49+swing*18,21-swing*20);ctx.rotate(-.2-swing*.75);
+      ctx.strokeStyle="#a8adb4";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(76,0);ctx.stroke();ctx.restore();
+    }else if(currentStage===7){
+      // 鹿の槍術師。長槍を腰の高さで構える。
+      ctx.strokeStyle="#4c3830";ctx.lineWidth=17;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(-22,35);ctx.lineTo(-28,59);ctx.stroke();ctx.beginPath();ctx.moveTo(22,35);ctx.lineTo(29,59);ctx.stroke();
+      ctx.fillStyle="#e3ded0";roundedRect(-38,-4,76,57,11);ctx.fill();ctx.fillStyle="#6c3434";ctx.fillRect(-36,22,72,8);
+      ctx.fillStyle="#a77b59";ctx.beginPath();ctx.ellipse(1,-40,35,31,0,0,Math.PI*2);ctx.fill();
+      // 鹿角
+      ctx.strokeStyle="#654a36";ctx.lineWidth=7;
+      ctx.beginPath();ctx.moveTo(-15,-63);ctx.lineTo(-28,-84);ctx.lineTo(-38,-91);ctx.moveTo(-28,-84);ctx.lineTo(-20,-98);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(14,-63);ctx.lineTo(26,-84);ctx.lineTo(37,-91);ctx.moveTo(26,-84);ctx.lineTo(19,-98);ctx.stroke();
+      ctx.fillStyle="#111";ctx.beginPath();ctx.arc(15,-45,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#71503e";ctx.beginPath();ctx.ellipse(28,-32,16,11,0,0,Math.PI*2);ctx.fill();
+
+      ctx.strokeStyle="#a77b59";ctx.lineWidth=13;ctx.beginPath();ctx.moveTo(24,2);ctx.lineTo(42,10);ctx.lineTo(50,17);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-20,3);ctx.lineTo(4,11);ctx.lineTo(19,16);ctx.stroke();
+
+      ctx.save();ctx.translate(20,16);
+      let angle=-.04,shift=0;
+      if(e.attackTimer>0){
+        const t=Math.max(0,Math.min(1,ap/.76));
+        if(e.weaponMode==="spearSweep"){angle=-.75+1.35*Math.sin(t*Math.PI*.5);shift=12*t;}
+        else{angle=-.04;shift=82*Math.sin(t*Math.PI*.5);}
+      }
+      ctx.rotate(angle);ctx.strokeStyle="#74452a";ctx.lineWidth=8;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(-72+shift,0);ctx.lineTo(112+shift,0);ctx.stroke();
+      ctx.fillStyle="#b9bdc0";ctx.beginPath();ctx.moveTo(112+shift,-8);ctx.lineTo(142+shift,0);ctx.lineTo(112+shift,8);ctx.closePath();ctx.fill();
+      ctx.restore();
+    }else if(currentStage===6){
       // 熊の鎖分銅使い。鎖が大きな円弧を描く。
       const air=e.jumping;
       ctx.strokeStyle="#322d2d";ctx.lineWidth=18;ctx.lineCap="round";
@@ -3314,7 +3634,9 @@
         (currentStage===2?"第二幕　港街":
         (currentStage===3?"第三幕　新市街":
         (currentStage===4?"第四幕　工場街":
-        (currentStage===5?"第五幕　海外街":"第六幕　港湾倉庫"))));
+        (currentStage===5?"第五幕　海外街":
+        (currentStage===6?"第六幕　港湾倉庫":
+        (currentStage===7?"第七幕　山岳寺院":"第八幕　現代繁華街"))))));
       ctx.fillText(stageName,innerWidth/2,88);
       ctx.font="14px sans-serif";
       ctx.fillText("STAGE "+currentStage,innerWidth/2,110);
@@ -3428,6 +3750,14 @@
         ctx.fillStyle="#fff";ctx.font="bold 26px serif";
         ctx.fillText("第五幕　海外街　突破",innerWidth/2,innerHeight*.43);
         ctx.font="19px sans-serif";ctx.fillText("港の最奥へ―― 第六幕「港湾倉庫」",innerWidth/2,innerHeight*.53);
+        if(clearTimer>.65){ctx.font="bold 17px sans-serif";ctx.fillText("攻撃・爪・ダッシュ・ジャンプで次へ",innerWidth/2,innerHeight*.64);}
+      }else if(currentStage===6){
+        ctx.fillStyle="#fff";ctx.font="bold 26px serif";ctx.fillText("第六幕　港湾倉庫　突破",innerWidth/2,innerHeight*.43);
+        ctx.font="19px sans-serif";ctx.fillText("山の奥へ―― 第七幕「山岳寺院」",innerWidth/2,innerHeight*.53);
+        if(clearTimer>.65){ctx.font="bold 17px sans-serif";ctx.fillText("攻撃・爪・ダッシュ・ジャンプで次へ",innerWidth/2,innerHeight*.64);}
+      }else if(currentStage===7){
+        ctx.fillStyle="#fff";ctx.font="bold 26px serif";ctx.fillText("第七幕　山岳寺院　突破",innerWidth/2,innerHeight*.43);
+        ctx.font="19px sans-serif";ctx.fillText("山を下り、現代へ―― 第八幕「現代繁華街」",innerWidth/2,innerHeight*.53);
         if(clearTimer>.65){ctx.font="bold 17px sans-serif";ctx.fillText("攻撃・爪・ダッシュ・ジャンプで次へ",innerWidth/2,innerHeight*.64);}
       }else{
         const [rank,ending]=resultText();
