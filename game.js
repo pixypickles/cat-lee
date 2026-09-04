@@ -1381,7 +1381,7 @@
             boss.attackHitDone=true;
             const hb={
               x:boss.facing>0?boss.x+boss.w-8:boss.x-90,
-              y:boss.y+18,w:98,h:78
+              y:boss.y+25,w:98,h:58
             };
             if(overlap(hb,player)){
               if(player.parryTimer>0){
@@ -1427,7 +1427,7 @@
             boss.attackHitDone=true;
             const hb={
               x:boss.facing>0?boss.x+boss.w-8:boss.x-86,
-              y:boss.y+20,w:94,h:74
+              y:boss.y+26,w:94,h:56
             };
             if(overlap(hb,player)){
               if(player.parryTimer>0){
@@ -2265,14 +2265,20 @@
       ctx.beginPath();ctx.arc(13,-45,4,0,Math.PI*2);ctx.fill();
       ctx.beginPath();ctx.arc(25,-35,3,0,Math.PI*2);ctx.fill();
 
-      // 太い前腕。空中では前へ突き出す。
-      ctx.strokeStyle="#4b4544";ctx.lineWidth=20;ctx.beginPath();ctx.moveTo(31,3);
+      // 太い前腕。通常時は拳を胸前に置く。攻撃は水平ストレート。
+      ctx.strokeStyle="#4b4544";ctx.lineWidth=20;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(31,3);
       if(airborne){
         ctx.lineTo(51,-3);ctx.lineTo(76,12);
       }else if(e.attackTimer>0){
-        ctx.lineTo(47,-23+50*ap);ctx.lineTo(80,4+34*ap);
+        const punch=Math.sin(Math.min(1,ap/.72)*Math.PI*.5);
+        const elbowX=43+18*punch;
+        const elbowY=8-3*punch;
+        const fistX=48+38*punch;
+        const fistY=11-5*punch;
+        ctx.lineTo(elbowX,elbowY);ctx.lineTo(fistX,fistY);
       }else{
-        ctx.lineTo(49,15);ctx.lineTo(34,29);
+        ctx.lineTo(43,10);ctx.lineTo(50,17);
       }
       ctx.stroke();
 
@@ -2305,12 +2311,15 @@
       ctx.beginPath();ctx.moveTo(36,-39);ctx.lineTo(45,-34);ctx.lineTo(36,-29);ctx.closePath();ctx.fill();
       ctx.fillStyle="#111";ctx.beginPath();ctx.arc(16,-44,4,0,Math.PI*2);ctx.fill();
 
-      // 攻撃腕
-      ctx.strokeStyle="#c8c6bf";ctx.lineWidth=16;ctx.beginPath();ctx.moveTo(29,4);
+      // 攻撃腕：胸前のガードから、顔の高さへ真っ直ぐ伸ばす。
+      ctx.strokeStyle="#c8c6bf";ctx.lineWidth=16;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(29,4);
       if(e.attackTimer>0){
-        ctx.lineTo(45,-24+50*ap);ctx.lineTo(78,0+34*ap);
+        const punch=Math.sin(Math.min(1,ap/.72)*Math.PI*.5);
+        ctx.lineTo(43+17*punch,7-5*punch);
+        ctx.lineTo(48+34*punch,11-9*punch);
       }else{
-        ctx.lineTo(46,11);ctx.lineTo(33,26);
+        ctx.lineTo(42,8);ctx.lineTo(48,17);
       }
       ctx.stroke();
 
@@ -2333,11 +2342,14 @@
       ctx.fillStyle="#111";ctx.beginPath();ctx.arc(16,-43,4,0,Math.PI*2);ctx.fill();
       ctx.beginPath();ctx.moveTo(33,-38);ctx.lineTo(41,-34);ctx.lineTo(33,-30);ctx.closePath();ctx.fill();
 
-      ctx.strokeStyle="#343235";ctx.lineWidth=15;ctx.beginPath();ctx.moveTo(27,4);
+      ctx.strokeStyle="#343235";ctx.lineWidth=15;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(27,4);
       if(e.attackTimer>0){
-        ctx.lineTo(42,-22+48*ap);ctx.lineTo(74,2+32*ap);
+        const punch=Math.sin(Math.min(1,ap/.72)*Math.PI*.5);
+        ctx.lineTo(41+17*punch,7-4*punch);
+        ctx.lineTo(47+33*punch,12-8*punch);
       }else{
-        ctx.lineTo(43,12);ctx.lineTo(31,25);
+        ctx.lineTo(40,9);ctx.lineTo(47,18);
       }
       ctx.stroke();
     }else{
@@ -2362,12 +2374,14 @@
       }
       ctx.fillStyle="#171515";ctx.beginPath();ctx.arc(16,-43,4,0,Math.PI*2);ctx.fill();
 
-      ctx.strokeStyle="#cf8446";ctx.lineWidth=15;
+      ctx.strokeStyle="#cf8446";ctx.lineWidth=15;ctx.lineCap="round";
       ctx.beginPath();ctx.moveTo(27,4);
       if(e.attackTimer>0){
-        ctx.lineTo(42,-22+48*ap);ctx.lineTo(72,2+32*ap);
+        const punch=Math.sin(Math.min(1,ap/.72)*Math.PI*.5);
+        ctx.lineTo(41+17*punch,7-4*punch);
+        ctx.lineTo(47+33*punch,12-8*punch);
       }else{
-        ctx.lineTo(41,14);ctx.lineTo(29,25);
+        ctx.lineTo(40,9);ctx.lineTo(47,18);
       }
       ctx.stroke();
     }
