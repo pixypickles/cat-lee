@@ -4028,37 +4028,49 @@
       ctx.restore();
     }
     if(sageMode){
-      // 猫仙人：白装束＋長い白髭＋白眉。通常CAT LEEのシルエットは残す。
+      // 猫仙人：体型は通常CAT LEEのまま。衣装を覆わず「顔・気配」だけ仙人化する。
       ctx.save();
-      ctx.globalAlpha=.96;
-      // 白装束を通常衣装より一回り大きく重ね、首元・肩・脇・裾まで完全に覆う。
-      ctx.fillStyle="#f4f1e8";
+      ctx.globalAlpha=.98;
+
+      // 長い白眉。通常より後ろへ流して老練な印象に。
+      ctx.strokeStyle="#fffdf5";
+      ctx.lineWidth=4.5;
+      ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(5,-44);ctx.quadraticCurveTo(18,-49,27,-47);ctx.stroke();
+
+      // 頬から下へ流れる細身の白髭。胴体を覆わない幅に抑える。
+      ctx.fillStyle="#fffdf5";
       ctx.beginPath();
-      ctx.moveTo(-34,-25);ctx.quadraticCurveTo(-18,-34,0,-31);ctx.quadraticCurveTo(19,-34,35,-24);
-      ctx.lineTo(40,18);ctx.quadraticCurveTo(38,40,27,51);ctx.lineTo(-27,51);
-      ctx.quadraticCurveTo(-39,39,-41,16);ctx.closePath();ctx.fill();
-      // 高い白襟で元の黄襟・青い肩線も隠す
-      ctx.fillStyle="#fffdf5";
-      ctx.beginPath();ctx.moveTo(-15,-31);ctx.lineTo(-2,-38);ctx.lineTo(8,-31);ctx.lineTo(17,-19);ctx.lineTo(2,-14);ctx.lineTo(-13,-19);ctx.closePath();ctx.fill();
-      // 合わせ目
-      ctx.strokeStyle="#d4d0c5";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-8,-25);ctx.lineTo(8,40);ctx.stroke();
-      // 白い袖も肩から太めに覆う
-      ctx.strokeStyle="#f4f1e8";ctx.lineWidth=18;ctx.lineCap="round";
-      ctx.beginPath();ctx.moveTo(-27,-13);ctx.lineTo(-38,12);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(27,-13);ctx.lineTo(39,11);ctx.stroke();
-      // 白い腰帯で裾から元衣装が覗くのを防ぐ
-      ctx.strokeStyle="#fffaf0";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(-28,39);ctx.lineTo(28,39);ctx.stroke();
-      // 白眉
-      ctx.strokeStyle="#fffdf5";ctx.lineWidth=5;
-      ctx.beginPath();ctx.moveTo(4,-43);ctx.lineTo(17,-46);ctx.stroke();
-      // 頬から胸まで流れる長い白髭
-      ctx.fillStyle="#fffdf5";
-      ctx.beginPath();ctx.moveTo(18,-31);ctx.quadraticCurveTo(31,-18,24,-2);ctx.quadraticCurveTo(19,17,7,31);
-      ctx.quadraticCurveTo(11,8,4,-8);ctx.quadraticCurveTo(8,-22,18,-31);ctx.closePath();ctx.fill();
-      ctx.beginPath();ctx.moveTo(10,-29);ctx.quadraticCurveTo(6,-10,-4,21);ctx.quadraticCurveTo(2,-5,0,-28);ctx.closePath();ctx.fill();
-      // 白い後ろ毛
-      ctx.strokeStyle="#eeeae0";ctx.lineWidth=7;
-      ctx.beginPath();ctx.moveTo(-19,-42);ctx.quadraticCurveTo(-36,-32,-38,-12);ctx.stroke();
+      ctx.moveTo(18,-30);
+      ctx.quadraticCurveTo(28,-19,22,-7);
+      ctx.quadraticCurveTo(17,5,11,18);
+      ctx.quadraticCurveTo(9,3,3,-8);
+      ctx.quadraticCurveTo(7,-22,18,-30);
+      ctx.closePath();ctx.fill();
+
+      // 顎髭を一本だけ長く。体の中央を隠しすぎない細さ。
+      ctx.beginPath();
+      ctx.moveTo(9,-23);
+      ctx.quadraticCurveTo(8,-5,1,22);
+      ctx.quadraticCurveTo(-2,31,-5,35);
+      ctx.quadraticCurveTo(0,13,0,-21);
+      ctx.closePath();ctx.fill();
+
+      // 後頭部の白い毛束。
+      ctx.strokeStyle="#eeeae0";
+      ctx.lineWidth=5.5;
+      ctx.beginPath();ctx.moveTo(-18,-43);ctx.quadraticCurveTo(-31,-36,-34,-23);ctx.stroke();
+
+      // 眉間に小さな金色の「気」の印。衣装を変えずに仙人だと判別できる目印。
+      ctx.fillStyle="#f5d86e";
+      ctx.beginPath();ctx.arc(-1,-49,3.2,0,Math.PI*2);ctx.fill();
+
+      // 手首だけ白い布巻きにして、通常CAT LEEとの差をもう一段つける。
+      ctx.strokeStyle="#f1eee5";
+      ctx.lineWidth=5;
+      ctx.beginPath();ctx.moveTo(30,5);ctx.lineTo(34,9);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-27,7);ctx.lineTo(-31,11);ctx.stroke();
+
       ctx.restore();
     }
     ctx.restore();
