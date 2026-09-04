@@ -458,6 +458,44 @@
     camera.x=0;camera.y=0;
   }
 
+  
+  function loadStage6(){
+    currentStage=6; stageCleared=false; clearTimer=0;
+    const ps=[
+      {x:0,y:1920,w:900,h:280},{x:900,y:1900,w:740,h:300},{x:1640,y:1940,w:800,h:260},
+      {x:2440,y:1890,w:780,h:310},{x:3220,y:1930,w:980,h:270},
+      {x:360,y:1660,w:340,h:42},{x:980,y:1560,w:390,h:42},{x:1680,y:1640,w:360,h:42},
+      {x:2260,y:1500,w:390,h:42},{x:2870,y:1590,w:360,h:42},{x:3460,y:1460,w:380,h:42},
+      {x:800,y:1400,w:60,h:500},{x:1510,y:1360,w:60,h:580},{x:2720,y:1340,w:60,h:550},{x:3360,y:1280,w:60,h:650},
+      {x:2080,y:1320,w:290,h:40},{x:2980,y:1240,w:270,h:40},{x:3560,y:1290,w:270,h:40}
+    ];
+    platforms.splice(0,platforms.length,...ps); configurePlatforms();
+    backgroundWallJumpSurfaces.splice(0,backgroundWallJumpSurfaces.length,
+      {x:120,y:1270,h:620},{x:740,y:1270,h:620},{x:900,y:1140,h:750},{x:1470,y:1140,h:750},
+      {x:1630,y:1280,h:610},{x:2160,y:1280,h:610},{x:2190,y:1080,h:810},{x:2700,y:1080,h:810},
+      {x:2810,y:1200,h:690},{x:3330,y:1200,h:690},{x:3410,y:990,h:900},{x:4160,y:990,h:900});
+    enemies.splice(0,enemies.length,
+      {x:560,y:1806,w:72,h:96,hp:8,vx:0,flash:0,alive:true,type:"dog"},
+      {x:1180,y:1786,w:72,h:96,hp:8,vx:0,flash:0,alive:true,type:"boar"},
+      {x:1880,y:1846,w:72,h:96,hp:9,vx:0,flash:0,alive:true,type:"fox"},
+      {x:2580,y:1796,w:72,h:96,hp:9,vx:0,flash:0,alive:true,type:"rabbit"},
+      {x:3280,y:1836,w:72,h:96,hp:10,vx:0,flash:0,alive:true,type:"dog"});
+    for(const e of enemies) initEnemyState(e);
+    throwers.splice(0,throwers.length,
+      {x:1090,y:1468,w:68,h:92,hp:8,alive:true,facing:-1,throwTimer:.85,flash:0},
+      {x:3010,y:1498,w:68,h:92,hp:8,alive:true,facing:-1,throwTimer:1.3,flash:0});
+    pots.length=0; attackFX.length=0;
+    Object.assign(boss,{
+      x:3910,y:1808,baseY:1808,w:108,h:122,hp:82,maxHp:82,vx:0,vy:0,facing:-1,
+      flash:0,alive:true,active:false,attackTimer:0,attackCooldown:.7,attackHitDone:false,
+      walkPhase:0,hitPause:0,jumping:false,jumpCooldown:1.0,weaponMode:"chain",weaponSerial:0
+    });
+    Object.assign(player,{x:180,y:1788,vx:0,vy:0,facing:1,grounded:false,onWall:0,wallLatched:false,
+      wallLatchSide:0,wallRef:null,wallJumpUsed:false,dashTimer:0,dashCooldown:0,attackTimer:0,
+      attackType:"",comboStep:0,comboWindow:0,invuln:1,respawnTimer:0,respawnX:180,respawnY:1788});
+    player.hp=player.maxHp; camera.x=0; camera.y=0;
+  }
+
   // 攻撃エフェクト兼ヒット判定。短時間だけ残る。
   const attackFX = [];
   function spawnAttackFX(fx){
@@ -1039,6 +1077,11 @@
         loadStage5();
         return;
       }
+      if(currentStage===5 && clearTimer>.65 && continuePressed){
+        input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
+        loadStage6();
+        return;
+      }
       input.attackPressed=input.clawPressed=input.dashPressed=input.jumpPressed=false;
       return;
     }
@@ -1388,7 +1431,38 @@
       boss.facing=dx<0?-1:1;
       const dist=Math.abs(dx);
 
-      if(currentStage===5){
+      if(currentStage===6){
+        // 鎖分銅ボス：遠距離の横振りと、時々跳び込み攻撃。
+        if(boss.jumping){
+          boss.vy+=1950*dt; boss.x+=boss.vx*dt; boss.y+=boss.vy*dt;
+          if(!boss.attackHitDone && boss.vy>50 && overlap({x:boss.x+5,y:boss.y+18,w:boss.w-10,h:boss.h-12},player)){
+            boss.attackHitDone=true;
+            if(player.parryTimer>0){triggerParry(player.x+player.w/2,player.y+player.h*.45);player.parryTimer=0;boss.vx=-boss.facing*260;boss.vy=-330;}
+            else hurtPlayer(4,650*boss.facing,-380);
+          }
+          if(boss.y>=boss.baseY){boss.y=boss.baseY;boss.vy=0;boss.vx=0;boss.jumping=false;boss.jumpCooldown=1.1;boss.attackCooldown=.45;}
+        }else if(boss.hitPause>0){
+          boss.vx*=Math.pow(.08,dt);boss.x+=boss.vx*dt;
+        }else if(boss.attackTimer>0){
+          const elapsed=.78-boss.attackTimer;boss.vx=0;
+          if(!boss.attackHitDone && elapsed>.31){
+            boss.attackHitDone=true;
+            const hb={x:boss.facing>0?boss.x+boss.w-20:boss.x-210,y:boss.y+12,w:230,h:88};
+            if(overlap(hb,player)){
+              if(player.parryTimer>0){triggerParry(player.x+player.w/2,player.y+player.h*.42);player.parryTimer=0;boss.attackTimer=0;boss.attackCooldown=1.15;boss.vx=-boss.facing*320;}
+              else hurtPlayer(4,760*boss.facing,-300);
+            }
+          }
+        }else if(boss.jumpCooldown<=0 && dist>230 && dist<600){
+          boss.jumping=true;boss.vy=-850;boss.vx=boss.facing*(300+Math.min(110,dist*.13));boss.attackHitDone=false;boss.jumpCooldown=1.5;
+        }else if(dist<255 && boss.attackCooldown<=0){
+          boss.attackTimer=.78;boss.attackCooldown=.9+Math.random()*.28;boss.attackHitDone=false;boss.weaponSerial=(boss.weaponSerial||0)+1;
+        }else if(dist<800 && dist>205){
+          boss.vx=boss.facing*160;boss.x+=boss.vx*dt;
+        }else boss.vx=0;
+        boss.x=Math.max(3650,Math.min(4090-boss.w,boss.x));
+        if(!boss.jumping)boss.y=boss.baseY;
+      }else if(currentStage===5){
         // 長棍ボス：突きと横薙ぎ。どちらも爪で弾ける。
         if(boss.hitPause>0){
           boss.vx*=Math.pow(.08,dt);
@@ -1596,6 +1670,51 @@
     ctx.arcTo(x,y+h,x,y,rr);
     ctx.arcTo(x,y,x+w,y,rr);
     ctx.closePath();
+  }
+
+  function drawStage6Background(){
+    const w=innerWidth,h=innerHeight;
+    const g=ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,"#0b1721");g.addColorStop(.62,"#27414d");g.addColorStop(1,"#665343");
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);ctx.save();
+
+    // 夜明け前の港と遠景クレーン
+    ctx.fillStyle="rgba(223,218,183,.22)";ctx.beginPath();ctx.arc(w*.8,105,52,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#182a32";ctx.lineWidth=13;
+    for(let i=0;i<8;i++){
+      const x=i*620-camera.x*.13-150,base=1570-camera.y*.04;
+      ctx.beginPath();ctx.moveTo(x,base);ctx.lineTo(x,base-430);ctx.lineTo(x+230,base-430);ctx.lineTo(x+80,base-320);ctx.stroke();
+    }
+    // 倉庫
+    const bs=[{x:120,y:1270,w:620,h:620},{x:900,y:1140,w:570,h:750},{x:1630,y:1280,w:530,h:610},
+      {x:2190,y:1080,w:510,h:810},{x:2810,y:1200,w:520,h:690},{x:3410,y:990,w:750,h:900}];
+    for(const b of bs){
+      const x=b.x-camera.x,y=b.y-camera.y;
+      ctx.fillStyle="#59636a";ctx.fillRect(x,y,b.w,b.h);
+      ctx.fillStyle="#313b42";ctx.fillRect(x,y,b.w,24);
+      ctx.strokeStyle="rgba(28,35,40,.35)";ctx.lineWidth=4;
+      for(let xx=x+45;xx<x+b.w;xx+=70){ctx.beginPath();ctx.moveTo(xx,y+25);ctx.lineTo(xx,y+b.h);ctx.stroke();}
+      for(let wx=x+70;wx<x+b.w-70;wx+=145){ctx.fillStyle="#244654";ctx.fillRect(wx,y+100,76,88);ctx.strokeStyle="#1d2c33";ctx.lineWidth=6;ctx.strokeRect(wx,y+100,76,88);}
+    }
+    // コンテナ
+    for(const [cx0,cy0,label] of [[330,1760,"LEE"],[1320,1740,"PACIFIC"],[2020,1780,"CARGO"],[2860,1735,"OCEAN"]]){
+      const x=cx0-camera.x,y=cy0-camera.y;
+      ctx.fillStyle="#75483f";ctx.fillRect(x,y,210,105);ctx.strokeStyle="#342d2d";ctx.lineWidth=5;ctx.strokeRect(x,y,210,105);
+      ctx.fillStyle="rgba(236,220,178,.65)";ctx.font="bold 18px sans-serif";ctx.fillText(label,x+18,y+60);
+    }
+    // 港の大型クレーンと吊りフック
+    ctx.strokeStyle="#26353d";ctx.lineWidth=16;
+    for(const gx0 of [780,1530,2720,3370]){
+      const x=gx0-camera.x;ctx.beginPath();ctx.moveTo(x,1880-camera.y);ctx.lineTo(x,1260-camera.y);ctx.lineTo(x+190,1260-camera.y);ctx.stroke();
+      ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x+145,1260-camera.y);ctx.lineTo(x+145,1450-camera.y);ctx.stroke();
+      ctx.lineWidth=16;
+    }
+    // 最奥の倉庫ゲート
+    const gx=3580-camera.x,gy=1350-camera.y;
+    ctx.fillStyle="#202a30";ctx.fillRect(gx,gy,480,540);ctx.strokeStyle="#8a7451";ctx.lineWidth=9;ctx.strokeRect(gx+20,gy+20,440,500);
+    ctx.fillStyle="#9b3231";ctx.fillRect(gx+100,gy+55,280,64);ctx.fillStyle="#ead071";ctx.font="bold 26px serif";ctx.textAlign="center";
+    ctx.fillText("第六倉庫",gx+240,gy+96);ctx.textAlign="left";
+    ctx.restore();
   }
 
   function drawStage5Background(){
@@ -2040,6 +2159,7 @@
   }
 
   function drawBackground(){
+    if(currentStage===6){drawStage6Background();return;}
     if(currentStage===5){
       drawStage5Background();
       return;
@@ -2184,6 +2304,16 @@
   function drawPlatform(p){
     const x=p.x-camera.x, y=p.y-camera.y;
 
+    if(currentStage===6){
+      if(p.climbThrough){
+        const cx=x+p.w/2;ctx.save();ctx.strokeStyle="#35444b";ctx.lineWidth=17;ctx.lineCap="square";
+        ctx.beginPath();ctx.moveTo(cx,y);ctx.lineTo(cx,y+p.h);ctx.stroke();ctx.strokeStyle="#849097";ctx.lineWidth=3;
+        for(let yy=y+38;yy<y+p.h;yy+=50){ctx.beginPath();ctx.moveTo(cx-12,yy);ctx.lineTo(cx+12,yy);ctx.stroke();}
+        ctx.restore();return;
+      }
+      if(p.oneWay){ctx.fillStyle="#46535a";ctx.fillRect(x,y,p.w,p.h);ctx.fillStyle="#8a775f";ctx.fillRect(x,y,p.w,8);return;}
+      ctx.fillStyle="#444b4e";roundedRect(x,y,p.w,p.h,4);ctx.fill();ctx.fillStyle="#77716a";ctx.fillRect(x,y,p.w,12);return;
+    }
     if(currentStage===5){
       if(p.climbThrough){
         const cx=x+p.w/2;ctx.save();ctx.strokeStyle="#343b44";ctx.lineWidth=16;ctx.lineCap="round";
@@ -2447,7 +2577,32 @@
     ctx.scale(e.facing,1);
     if(e.flash>0) ctx.globalAlpha=.48;
 
-    if(currentStage===5){
+    if(currentStage===6){
+      // 熊の鎖分銅使い。鎖が大きな円弧を描く。
+      const air=e.jumping;
+      ctx.strokeStyle="#322d2d";ctx.lineWidth=18;ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(-22,35);ctx.lineTo(-28,58-(air?12:0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(22,35);ctx.lineTo(29,58-(air?12:0));ctx.stroke();
+      ctx.fillStyle="#4a2c32";roundedRect(-39,-4,78,57,12);ctx.fill();
+      ctx.fillStyle="#b9974f";ctx.fillRect(-36,22,72,8);
+      ctx.fillStyle="#76594a";ctx.beginPath();ctx.ellipse(1,-40,37,32,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(-20,-63,11,0,Math.PI*2);ctx.arc(21,-63,11,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#b08a70";ctx.beginPath();ctx.ellipse(21,-31,21,14,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#111";ctx.beginPath();ctx.arc(13,-45,4,0,Math.PI*2);ctx.fill();
+
+      ctx.strokeStyle="#76594a";ctx.lineWidth=16;ctx.beginPath();ctx.moveTo(28,3);ctx.lineTo(43,9);ctx.lineTo(51,15);ctx.stroke();
+
+      // 鎖＋分銅
+      ctx.save();ctx.translate(48,15);
+      let ang=-.15,len=76;
+      if(e.attackTimer>0){
+        const t=Math.max(0,Math.min(1,ap/.78));ang=-1.15+t*Math.PI*2.15;len=105+35*Math.sin(t*Math.PI);
+      }else if(air){ang=.55;len=92;}
+      ctx.rotate(ang);ctx.strokeStyle="#b8b0a2";ctx.lineWidth=4;ctx.setLineDash([8,5]);
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(len,0);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle="#55565a";ctx.beginPath();ctx.arc(len+10,0,13,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="#b8b0a2";ctx.lineWidth=3;ctx.stroke();ctx.restore();
+    }else if(currentStage===5){
       // 鷹の棍術家
       ctx.strokeStyle="#272a2f";ctx.lineWidth=17;ctx.lineCap="round";
       ctx.beginPath();ctx.moveTo(-22,35);ctx.lineTo(-27,58);ctx.stroke();
@@ -3158,7 +3313,8 @@
       const stageName=currentStage===1?"第一幕　古街":
         (currentStage===2?"第二幕　港街":
         (currentStage===3?"第三幕　新市街":
-        (currentStage===4?"第四幕　工場街":"第五幕　海外街")));
+        (currentStage===4?"第四幕　工場街":
+        (currentStage===5?"第五幕　海外街":"第六幕　港湾倉庫"))));
       ctx.fillText(stageName,innerWidth/2,88);
       ctx.font="14px sans-serif";
       ctx.fillText("STAGE "+currentStage,innerWidth/2,110);
@@ -3268,6 +3424,11 @@
           ctx.font="bold 17px sans-serif";
           ctx.fillText("攻撃・爪・ダッシュ・ジャンプで次へ",innerWidth/2,innerHeight*.64);
         }
+      }else if(currentStage===5){
+        ctx.fillStyle="#fff";ctx.font="bold 26px serif";
+        ctx.fillText("第五幕　海外街　突破",innerWidth/2,innerHeight*.43);
+        ctx.font="19px sans-serif";ctx.fillText("港の最奥へ―― 第六幕「港湾倉庫」",innerWidth/2,innerHeight*.53);
+        if(clearTimer>.65){ctx.font="bold 17px sans-serif";ctx.fillText("攻撃・爪・ダッシュ・ジャンプで次へ",innerWidth/2,innerHeight*.64);}
       }else{
         const [rank,ending]=resultText();
         ctx.fillStyle="#fff";
